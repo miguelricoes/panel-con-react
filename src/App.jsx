@@ -1,9 +1,42 @@
-import AdminPanel from './AdminPanel'; // Asegúrate que el archivo AdminPanel.jsx existe
+// src/App.jsx
+import { useState } from "react";
+import Header from "./components/Header";
+import Sidebar from "./components/Sidebar";
+import Inicio from "./pages/Inicio";
+import Usuarios from "./pages/Usuarios";
+import Configuracion from "./pages/Configuracion";
+import PQRS from "./pages/PQRS";
+import Reserva from "./pages/Reserva";
+import Login from "./pages/Login";
+import { useStore } from "@/store/useStore";
 
-function App() {
+
+export default function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false); // ✅ Nuevo estado
+  const paginaActual = useStore((state) => state.paginaActual);
+
+  const paginas = {
+    usuarios: <Usuarios />,
+    configuracion: <Configuracion />,
+    pqrs: <PQRS />,
+    reserva: <Reserva />,
+    inicio: <Inicio />,
+  };
+
+  if (!isLoggedIn) {
+    return <Login onLogin={() => setIsLoggedIn(true)} />;
+  }
+
   return (
-    <AdminPanel />
+    <div className="flex h-screen bg-gray-950">
+      <Sidebar />
+
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <Header onLogout={() => setIsLoggedIn(false)} /> {/* ✅ Pasa función */}
+        <main className="flex-1 overflow-y-auto p-6">
+          {paginas[paginaActual] || <Inicio />}
+        </main>
+      </div>
+    </div>
   );
 }
-
-export default App;
