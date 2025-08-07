@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
 export const useConfigStore = create((set) => ({
-  tema: 'oscuro',
+  tema: 'claro',
   idioma: 'es',
   zonaHoraria: 'Colombia - Bogotá',
   modoIA: 'amigable',

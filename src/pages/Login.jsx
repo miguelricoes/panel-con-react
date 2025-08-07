@@ -1,6 +1,6 @@
 // src/pages/Login.jsx
 import { useState } from "react";
-import { useStore } from "@/store/useStore";
+import { useStore } from "../store/useStore";
 
 export default function Login({ onLogin }) {
   const [correo, setCorreo] = useState("");
@@ -31,44 +31,46 @@ export default function Login({ onLogin }) {
   };
 
   return (
-    <div className="h-screen bg-gray-900 flex justify-center items-center text-white">
+    <div className="h-screen bg-gray-900 flex justify-center items-center text-white p-4">
       <form
         onSubmit={handleLogin}
-        className="bg-gray-800 p-8 rounded shadow-md w-full max-w-md"
+        className="bg-gray-800 p-6 sm:p-8 rounded-lg shadow-lg w-full max-w-md"
       >
-        <h2 className="text-2xl font-bold mb-6 text-center">
+        <h2 className="text-xl sm:text-2xl font-bold mb-6 text-center">
           Iniciar sesión
         </h2>
 
         {error && (
-          <div className="bg-red-600 p-2 mb-4 rounded text-center">{error}</div>
+          <div className="bg-red-600 p-3 mb-4 rounded text-center text-sm sm:text-base">
+            {error}
+          </div>
         )}
 
         <div className="mb-4">
-          <label className="block mb-1">Correo</label>
+          <label className="block mb-2 text-sm sm:text-base font-medium">Correo</label>
           <input
             type="email"
             value={correo}
             onChange={(e) => setCorreo(e.target.value)}
-            className="w-full px-4 py-2 rounded bg-gray-700 text-white"
+            className="w-full px-4 py-3 rounded bg-gray-700 text-white border border-gray-600 text-sm sm:text-base"
             required
           />
         </div>
 
         <div className="mb-6">
-          <label className="block mb-1">Contraseña</label>
+          <label className="block mb-2 text-sm sm:text-base font-medium">Contraseña</label>
           <input
             type="password"
             value={contrasena}
             onChange={(e) => setContrasena(e.target.value)}
-            className="w-full px-4 py-2 rounded bg-gray-700 text-white"
+            className="w-full px-4 py-3 rounded bg-gray-700 text-white border border-gray-600 text-sm sm:text-base"
             required
           />
         </div>
 
         <button
           type="submit"
-          className="w-full bg-blue-600 hover:bg-blue-700 py-2 rounded"
+          className="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded font-medium text-sm sm:text-base transition-colors"
         >
           Iniciar sesión
         </button>
