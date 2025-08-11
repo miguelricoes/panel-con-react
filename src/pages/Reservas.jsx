@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useStore } from "../store/useStore";
 import { useConfigStore } from "../store/configStore";
-import { Eye, Mail, X, FileText } from "lucide-react";
+import { Eye, Mail, X, FileText, Filter, Search, Users, Calendar } from "lucide-react";
 
 export default function Reservas() {
   const reservasHuespedes = useStore((state) => state.reservasHuespedes);
@@ -11,6 +11,15 @@ export default function Reservas() {
   const [modalObservaciones, setModalObservaciones] = useState(null);
   const [asuntoCorreo, setAsuntoCorreo] = useState("");
   const [mensajeCorreo, setMensajeCorreo] = useState("");
+
+  // Estados para filtros
+  const [filtros, setFiltros] = useState({
+    domo: '',
+    numeroPersonas: '',
+    fechaBusqueda: '',
+    nombre: ''
+  });
+  const [mostrarFiltros, setMostrarFiltros] = useState(false);
 
   const abrirModalServicios = (servicios) => {
     setModalServicios(servicios);
@@ -39,15 +48,185 @@ export default function Reservas() {
     setMensajeCorreo("");
   };
 
+  // Función para filtrar reservas
+  const reservasFiltradas = useMemo(() => {
+    return reservasHuespedes.filter(reserva => {
+      // Filtro por domo
+      if (filtros.domo && reserva.domo !== filtros.domo) return false;
+      
+      // Filtro por número de personas
+      if (filtros.numeroPersonas && reserva.numeroPersonas.toString() !== filtros.numeroPersonas) return false;
+      
+      // Filtro por nombre (búsqueda parcial)
+      if (filtros.nombre && !reserva.nombre.toLowerCase().includes(filtros.nombre.toLowerCase())) return false;
+      
+      // Filtro por fecha (busca si la fecha está dentro del rango de estadía)
+      if (filtros.fechaBusqueda) {
+        const fechaBusqueda = new Date(filtros.fechaBusqueda);
+        const fechaEntrada = new Date(reserva.fechaEntrada);
+        const fechaSalida = new Date(reserva.fechaSalida);
+        if (fechaBusqueda < fechaEntrada || fechaBusqueda > fechaSalida) return false;
+      }
+      
+      return true;
+    });
+  }, [reservasHuespedes, filtros]);
+
+  // Limpiar filtros
+  const limpiarFiltros = () => {
+    setFiltros({
+      domo: '',
+      numeroPersonas: '',
+      fechaBusqueda: '',
+      nombre: ''
+    });
+  };
+
   return (
     <div className={`w-full ${tema === 'claro' ? 'text-gray-900' : 'text-white'}`}>
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold">Base de Datos - Huéspedes</h2>
-        <div className={`px-3 py-1 rounded text-sm ${
-          tema === 'claro' ? 'bg-blue-100 text-blue-800' : 'bg-blue-900 text-blue-200'
-        }`}>
-          Total: {reservasHuespedes.length} reservas
+      {/* Header con filtros */}
+      <div className="mb-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+          <h2 className="text-2xl font-bold">Base de Datos - Huéspedes</h2>
+          <div className="flex items-center gap-3">
+            <div className={`px-3 py-1 rounded text-sm ${
+              tema === 'claro' ? 'bg-blue-100 text-blue-800' : 'bg-blue-900 text-blue-200'
+            }`}>
+              Mostrando: {reservasFiltradas.length} de {reservasHuespedes.length} reservas
+            </div>
+            <button
+              onClick={() => setMostrarFiltros(!mostrarFiltros)}
+              className={`flex items-center gap-2 px-4 py-2 rounded transition-colors ${
+                tema === 'claro' 
+                  ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' 
+                  : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+              }`}
+            >
+              <Filter size={16} />
+              <span className="hidden sm:inline">
+                {mostrarFiltros ? 'Ocultar Filtros' : 'Mostrar Filtros'}
+              </span>
+            </button>
+          </div>
         </div>
+
+        {/* Panel de filtros */}
+        {mostrarFiltros && (
+          <div className={`rounded-lg p-4 mb-4 border ${
+            tema === 'claro' 
+              ? 'bg-gray-50 border-gray-200' 
+              : 'bg-gray-800 border-gray-600'
+          }`}>
+            <h3 className="font-semibold mb-3 flex items-center gap-2">
+              <Filter size={16} />
+              Filtros de Búsqueda
+            </h3>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Filtro por nombre */}
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  <Search size={14} className="inline mr-1" />
+                  Buscar por nombre
+                </label>
+                <input
+                  type="text"
+                  placeholder="Nombre del huésped..."
+                  value={filtros.nombre}
+                  onChange={(e) => setFiltros({...filtros, nombre: e.target.value})}
+                  className={`w-full px-3 py-2 rounded border text-sm ${
+                    tema === 'claro' 
+                      ? 'border-gray-300 bg-white text-gray-900' 
+                      : 'border-gray-600 bg-gray-700 text-white'
+                  }`}
+                />
+              </div>
+
+              {/* Filtro por domo */}
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  <span className="mr-1">🏨</span>
+                  Domo
+                </label>
+                <select
+                  value={filtros.domo}
+                  onChange={(e) => setFiltros({...filtros, domo: e.target.value})}
+                  className={`w-full px-3 py-2 rounded border text-sm ${
+                    tema === 'claro' 
+                      ? 'border-gray-300 bg-white text-gray-900' 
+                      : 'border-gray-600 bg-gray-700 text-white'
+                  }`}
+                >
+                  <option value="">Todos los domos</option>
+                  <option value="Centary">Centary</option>
+                  <option value="Polaris">Polaris</option>
+                  <option value="Antares">Antares</option>
+                  <option value="Sirius">Sirius</option>
+                </select>
+              </div>
+
+              {/* Filtro por número de personas */}
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  <Users size={14} className="inline mr-1" />
+                  Número de personas
+                </label>
+                <select
+                  value={filtros.numeroPersonas}
+                  onChange={(e) => setFiltros({...filtros, numeroPersonas: e.target.value})}
+                  className={`w-full px-3 py-2 rounded border text-sm ${
+                    tema === 'claro' 
+                      ? 'border-gray-300 bg-white text-gray-900' 
+                      : 'border-gray-600 bg-gray-700 text-white'
+                  }`}
+                >
+                  <option value="">Cualquier cantidad</option>
+                  <option value="1">1 persona</option>
+                  <option value="2">2 personas</option>
+                  <option value="3">3 personas</option>
+                  <option value="4">4 personas</option>
+                  <option value="5">5 personas</option>
+                  <option value="6">6 personas</option>
+                </select>
+              </div>
+
+              {/* Filtro por fecha */}
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  <Calendar size={14} className="inline mr-1" />
+                  Fecha específica
+                </label>
+                <input
+                  type="date"
+                  value={filtros.fechaBusqueda}
+                  onChange={(e) => setFiltros({...filtros, fechaBusqueda: e.target.value})}
+                  className={`w-full px-3 py-2 rounded border text-sm ${
+                    tema === 'claro' 
+                      ? 'border-gray-300 bg-white text-gray-900' 
+                      : 'border-gray-600 bg-gray-700 text-white'
+                  }`}
+                />
+                <p className="text-xs mt-1 opacity-75">
+                  Busca huéspedes que estén en el glamping en esta fecha
+                </p>
+              </div>
+            </div>
+
+            {/* Botones de acción */}
+            <div className="flex justify-end mt-4 gap-2">
+              <button
+                onClick={limpiarFiltros}
+                className={`px-4 py-2 rounded text-sm transition-colors ${
+                  tema === 'claro' 
+                    ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' 
+                    : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                }`}
+              >
+                Limpiar filtros
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Vista de tabla para desktop */}
@@ -76,7 +255,7 @@ export default function Reservas() {
               </tr>
             </thead>
             <tbody>
-              {reservasHuespedes.map((huesped) => (
+              {reservasFiltradas.map((huesped) => (
                 <tr key={huesped.id} className={`border-t ${
                   tema === 'claro' ? 'border-gray-200 hover:bg-gray-50' : 'border-gray-600 hover:bg-gray-700'
                 }`}>
@@ -181,7 +360,7 @@ export default function Reservas() {
 
       {/* Vista de cards para móvil y tablet */}
       <div className="lg:hidden space-y-4">
-        {reservasHuespedes.map((huesped) => (
+        {reservasFiltradas.map((huesped) => (
           <div key={huesped.id} className={`rounded-lg shadow-lg p-4 ${
             tema === 'claro' ? 'bg-white' : 'bg-gray-800'
           }`}>

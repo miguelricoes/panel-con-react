@@ -44,25 +44,44 @@ export const useStore = create((set) => ({
   ],
   
 
-  // diasReservados se genera automáticamente desde reservasHuespedes
-  get diasReservados() {
+  // diasReservados se calcula como función para evitar problemas con 'this'
+  diasReservados: [],
+
+  // Función para calcular días reservados
+  calcularDiasReservados: () => {
+    const state = useStore.getState();
     const dias = [];
-    this.reservasHuespedes.forEach(reserva => {
-      const fechaInicio = new Date(reserva.fechaEntrada);
-      const fechaFin = new Date(reserva.fechaSalida);
-      
-      // Generar todos los días entre entrada y salida (incluyendo entrada, excluyendo salida)
-      for (let fecha = new Date(fechaInicio); fecha < fechaFin; fecha.setDate(fecha.getDate() + 1)) {
-        const fechaStr = fecha.toISOString().split('T')[0];
-        dias.push({
-          dia: fechaStr,
-          tipo: `${reserva.domo} - ${reserva.nombre}`,
-          huesped: reserva
-        });
-      }
-    });
+    
+    try {
+      state.reservasHuespedes.forEach(reserva => {
+        const fechaInicio = new Date(reserva.fechaEntrada);
+        const fechaFin = new Date(reserva.fechaSalida);
+        
+        // Evitar loop infinito con contador de seguridad
+        let contador = 0;
+        const maxDias = 365; // Límite de seguridad
+        
+        for (let fecha = new Date(fechaInicio); fecha < fechaFin && contador < maxDias; contador++) {
+          const fechaStr = fecha.toISOString().split('T')[0];
+          dias.push({
+            dia: fechaStr,
+            tipo: `${reserva.domo} - ${reserva.nombre}`,
+            huesped: reserva
+          });
+          fecha.setDate(fecha.getDate() + 1);
+        }
+      });
+    } catch (error) {
+      console.error('Error calculando días reservados:', error);
+    }
+    
     return dias;
   },
+
+  // Función para actualizar días reservados
+  actualizarDiasReservados: () => set((state) => ({
+    diasReservados: state.calcularDiasReservados()
+  })),
   pqrsPendientes: [
     {
       id: "PQRS-001",

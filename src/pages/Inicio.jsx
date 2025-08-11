@@ -7,6 +7,10 @@ export default function Inicio() {
   const reservasHuespedes = useStore((state) => state.reservasHuespedes);
   const pqrsPendientes = useStore((state) => state.pqrsPendientes);
   const diasReservados = useStore((state) => state.diasReservados);
+  const calcularDiasReservados = useStore((state) => state.calcularDiasReservados);
+  
+  // Calcular días reservados de forma segura
+  const diasReservadosCalculados = diasReservados.length > 0 ? diasReservados : calcularDiasReservados();
   const tema = useConfigStore((state) => state.tema);
 
   // Calcular estadísticas
