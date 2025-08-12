@@ -1,6 +1,7 @@
 import { create } from 'zustand';
+import { fetchReservas, syncReservas } from '../api/reservasApi';
 
-export const useStore = create((set) => ({
+export const useStore = create((set, get) => ({
   notificaciones: [
     {
       id: 1,
@@ -133,133 +134,8 @@ export const useStore = create((set) => ({
     }
   ],
 
-  reservasHuespedes: [
-    {
-      id: "RSV-001",
-      nombre: "María González Pérez",
-      numero: "+57 300 123 4567",
-      email: "maria.gonzalez@email.com",
-      numeroPersonas: 4,
-      fechaEntrada: "2025-07-15",
-      fechaSalida: "2025-07-17",
-      domo: "Centary",
-      servicios: [
-        { nombre: "Cena romántica", precio: 80000, descripcion: "Cena para dos personas con vista al lago" },
-        { nombre: "Spa y relajación", precio: 120000, descripcion: "Masajes y tratamientos de spa" }
-      ],
-      montoAPagar: 450000,
-      metodoPago: "Transferencia",
-      observaciones: "Huésped con movilidad reducida. Requiere acceso especial al domo y rampa de acceso. La señora María utiliza silla de ruedas y necesita que el domo esté preparado con barras de apoyo en el baño. También solicita que el estacionamiento esté lo más cerca posible de la entrada. Es importante tener en cuenta que viajan con un perro de asistencia certificado."
-    },
-    {
-      id: "RSV-002", 
-      nombre: "Carlos Rodríguez",
-      numero: "+57 310 987 6543",
-      email: "carlos.rodriguez@email.com",
-      numeroPersonas: 2,
-      fechaEntrada: "2025-06-20",
-      fechaSalida: "2025-06-22",
-      domo: "Polaris",
-      servicios: [],
-      montoAPagar: 280000,
-      metodoPago: "Efectivo",
-      observaciones: "Aniversario de bodas. Solicita decoración especial."
-    },
-    {
-      id: "RSV-003",
-      nombre: "Ana Sofía Martínez",
-      numero: "+57 320 456 7890",
-      email: "anasofia.martinez@email.com",
-      numeroPersonas: 6,
-      fechaEntrada: "2025-05-25",
-      fechaSalida: "2025-05-28",
-      domo: "Antares",
-      servicios: [
-        { nombre: "Fogata nocturna", precio: 50000, descripcion: "Fogata con malvaviscos y música" },
-        { nombre: "Desayuno especial", precio: 35000, descripcion: "Desayuno gourmet en el domo" },
-        { nombre: "Tour de observación", precio: 60000, descripcion: "Tour guiado para observar estrellas" }
-      ],
-      montoAPagar: 520000,
-      metodoPago: "Tarjeta",
-      observaciones: "Grupo familiar con niños pequeños de 2, 4 y 6 años. Requiere cunas adicionales y medidas de seguridad infantil. Los padres solicitan que se instalen protectores en las escaleras y balcones. También necesitan un área segura para que los niños jueguen. La familia es vegetariana estricta y requiere menús especiales. Uno de los niños tiene alergia al maní, por favor tener especial cuidado con los alimentos que se sirvan."
-    },
-    {
-      id: "RSV-004",
-      nombre: "Luis Fernando Castro",
-      numero: "+57 315 234 5678",
-      email: "luis.castro@email.com", 
-      numeroPersonas: 3,
-      fechaEntrada: "2025-04-01",
-      fechaSalida: "2025-04-03",
-      domo: "Sirius",
-      servicios: [
-        { nombre: "Transporte especial", precio: 45000, descripcion: "Transporte desde la ciudad" }
-      ],
-      montoAPagar: 375000,
-      metodoPago: "Transferencia",
-      observaciones: "Primera vez en glamping. Muy entusiasmados."
-    },
-    {
-      id: "RSV-005",
-      nombre: "Isabella Jiménez Ramos",
-      numero: "+57 301 876 5432",
-      email: "isabella.jimenez@email.com",
-      numeroPersonas: 2,
-      fechaEntrada: "2025-08-12",
-      fechaSalida: "2025-08-14",
-      domo: "Polaris",
-      servicios: [],
-      montoAPagar: 280000,
-      metodoPago: "Efectivo",
-      observaciones: ""
-    },
-    {
-      id: "RSV-006",
-      nombre: "Roberto Castillo Vega",
-      numero: "+57 311 555 7788",
-      email: "roberto.castillo@email.com",
-      numeroPersonas: 5,
-      fechaEntrada: "2025-08-10",
-      fechaSalida: "2025-08-12",
-      domo: "Centary",
-      servicios: [
-        { nombre: "Cena romántica", precio: 80000, descripcion: "Cena para dos personas con vista al lago" }
-      ],
-      montoAPagar: 420000,
-      metodoPago: "Tarjeta",
-      observaciones: "Celebración familiar de cumpleaños. Solicitan torta especial."
-    },
-    {
-      id: "RSV-007",
-      nombre: "Sofía Hernández Torres",
-      numero: "+57 312 444 9900",
-      email: "sofia.hernandez@email.com",
-      numeroPersonas: 2,
-      fechaEntrada: "2025-08-15",
-      fechaSalida: "2025-08-17",
-      domo: "Sirius",
-      servicios: [],
-      montoAPagar: 280000,
-      metodoPago: "Transferencia",
-      observaciones: "Luna de miel. Primera vez en glamping."
-    },
-    {
-      id: "RSV-008",
-      nombre: "Alejandro Ruiz Moreno",
-      numero: "+57 313 777 2233",
-      email: "alejandro.ruiz@email.com",
-      numeroPersonas: 4,
-      fechaEntrada: "2025-08-22",
-      fechaSalida: "2025-08-25",
-      domo: "Antares",
-      servicios: [
-        { nombre: "Tour de observación", precio: 60000, descripcion: "Tour guiado para observar estrellas" }
-      ],
-      montoAPagar: 460000,
-      metodoPago: "Efectivo",
-      observaciones: "Viaje con amigos. Interesados en actividades nocturnas."
-    }
-  ],
+  // Array de reservas - se carga desde la API
+  reservasHuespedes: [],
 
   setPaginaActual: (pagina) => set({ paginaActual: pagina }),
 
@@ -303,4 +179,64 @@ export const useStore = create((set) => ({
         { id: Date.now(), tipo, mensaje },
       ],
     })),
+
+  // Estados para la sincronización con la API
+  isLoading: false,
+  lastSync: null,
+  syncError: null,
+
+  // Función principal para cargar reservas (versión simplificada)
+  cargarReservas: async () => {
+    set({ isLoading: true, syncError: null });
+    try {
+      const reservas = await fetchReservas();
+      set({ 
+        reservasHuespedes: reservas || [],
+        lastSync: new Date().toISOString(),
+        isLoading: false,
+        syncError: null
+      });
+      // Actualizar días reservados después de cargar las reservas
+      const state = get();
+      state.actualizarDiasReservados();
+    } catch (error) {
+      console.error('Error cargando reservas:', error);
+      set({ 
+        syncError: error.message,
+        isLoading: false
+      });
+    }
+  },
+
+  // Función extendida para cargar reservas desde la API (mantener para retrocompatibilidad)
+  cargarReservasDesdeAPI: async () => {
+    const state = get();
+    await state.cargarReservas();
+  },
+
+  // Función para sincronizar periódicamente
+  sincronizarReservas: async () => {
+    try {
+      const reservasAPI = await syncReservas();
+      if (reservasAPI) {
+        set({ 
+          reservasHuespedes: reservasAPI,
+          lastSync: new Date().toISOString(),
+          syncError: null
+        });
+        // Actualizar días reservados después de sincronizar
+        const state = get();
+        state.actualizarDiasReservados();
+      }
+    } catch (error) {
+      console.error('Error sincronizando reservas:', error);
+      set({ syncError: error.message });
+    }
+  },
+
+  // Función para forzar una sincronización
+  forzarSincronizacion: async () => {
+    const state = get();
+    await state.cargarReservas();
+  },
 }));

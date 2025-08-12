@@ -1,10 +1,14 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useStore } from "../store/useStore";
 import { useConfigStore } from "../store/configStore";
-import { Eye, Mail, X, FileText, Filter, Search, Users, Calendar } from "lucide-react";
+import { Eye, Mail, X, FileText, Filter, Search, Users, Calendar, RefreshCw, AlertCircle } from "lucide-react";
 
 export default function Reservas() {
-  const reservasHuespedes = useStore((state) => state.reservasHuespedes);
+  const { reservasHuespedes, cargarReservas } = useStore();
+  const isLoading = useStore((state) => state.isLoading);
+  const syncError = useStore((state) => state.syncError);
+  const lastSync = useStore((state) => state.lastSync);
+  const forzarSincronizacion = useStore((state) => state.forzarSincronizacion);
   const tema = useConfigStore((state) => state.tema);
   const [modalServicios, setModalServicios] = useState(null);
   const [modalCorreo, setModalCorreo] = useState(null);
@@ -82,6 +86,32 @@ export default function Reservas() {
     });
   };
 
+  // Cargar reservas al montar el componente
+  useEffect(() => {
+    cargarReservas();
+  }, []);
+
+  // Sincronización en tiempo real - Polling cada 30 segundos (5 segundos en desarrollo para testing)
+  useEffect(() => {
+    const syncInterval = import.meta.env.DEV ? 5000 : 30000; // 5s dev, 30s prod
+    
+    const interval = setInterval(() => {
+      // Solo sincronizar si no está cargando actualmente
+      if (!isLoading) {
+        console.log('🔄 Sincronización automática ejecutándose...');
+        cargarReservas();
+      }
+    }, syncInterval);
+
+    console.log(`⏱️ Sincronización configurada cada ${syncInterval/1000} segundos`);
+
+    // Limpiar interval al desmontar componente
+    return () => {
+      console.log('🛑 Limpiando interval de sincronización');
+      clearInterval(interval);
+    };
+  }, [isLoading, cargarReservas]);
+
   return (
     <div className={`w-full ${tema === 'claro' ? 'text-gray-900' : 'text-white'}`}>
       {/* Header con filtros */}
@@ -89,11 +119,52 @@ export default function Reservas() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
           <h2 className="text-2xl font-bold">Base de Datos - Huéspedes</h2>
           <div className="flex items-center gap-3">
+            {/* Estado de sincronización */}
+            {syncError && (
+              <div className={`px-3 py-1 rounded text-sm flex items-center gap-2 ${
+                tema === 'claro' ? 'bg-red-100 text-red-800' : 'bg-red-900 text-red-200'
+              }`}>
+                <AlertCircle size={14} />
+                Error de conexión
+              </div>
+            )}
+            
+            {lastSync && !syncError && (
+              <div className={`px-3 py-1 rounded text-sm ${
+                tema === 'claro' ? 'bg-green-100 text-green-800' : 'bg-green-900 text-green-200'
+              }`}>
+                Última sync: {new Date(lastSync).toLocaleTimeString()}
+              </div>
+            )}
+
             <div className={`px-3 py-1 rounded text-sm ${
               tema === 'claro' ? 'bg-blue-100 text-blue-800' : 'bg-blue-900 text-blue-200'
             }`}>
               Mostrando: {reservasFiltradas.length} de {reservasHuespedes.length} reservas
             </div>
+
+            {/* Botón de sincronización */}
+            <button
+              onClick={() => {
+                console.log('🔄 Botón de sincronización manual clickeado');
+                forzarSincronizacion();
+              }}
+              disabled={isLoading}
+              className={`flex items-center gap-2 px-3 py-2 rounded transition-colors ${
+                isLoading 
+                  ? 'opacity-50 cursor-not-allowed'
+                  : tema === 'claro' 
+                    ? 'bg-blue-500 hover:bg-blue-600 text-white' 
+                    : 'bg-blue-600 hover:bg-blue-700 text-white'
+              }`}
+              title="Sincronizar con base de datos"
+            >
+              <RefreshCw size={16} className={isLoading ? 'animate-spin' : ''} />
+              <span className="hidden sm:inline">
+                {isLoading ? 'Sincronizando...' : 'Sincronizar'}
+              </span>
+            </button>
+            
             <button
               onClick={() => setMostrarFiltros(!mostrarFiltros)}
               className={`flex items-center gap-2 px-4 py-2 rounded transition-colors ${

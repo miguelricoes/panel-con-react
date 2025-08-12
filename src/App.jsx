@@ -2,6 +2,7 @@ import { useState, lazy, Suspense, useEffect } from "react";
 import Login from "./pages/Login";
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
+import TestPanel from "./components/TestPanel";
 import { useConfigStore } from "./store/configStore";
 import { useStore } from "./store/useStore";
 
@@ -89,6 +90,7 @@ export default function App() {
 
   return (
     <div className={`flex h-screen ${tema === 'claro' ? 'bg-gray-100' : 'bg-gray-950'}`}>
+      <TestPanel />
       <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header onLogout={() => {

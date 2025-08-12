@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Store - Panel Glamping</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+        .pass { background-color: #d4edda; border-color: #c3e6cb; }
+        .fail { background-color: #f8d7da; border-color: #f5c6cb; }
+        button { margin: 5px; padding: 8px 16px; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Tests del Store - Panel Glamping</h1>
+    
+    <div id="test-results"></div>
+    
+    <h2>Controles de Prueba:</h2>
+    <button onclick="testStoreInitialization()">Test 1: Inicialización del Store</button>
+    <button onclick="testLoadReservas()">Test 2: Función cargarReservas</button>
+    <button onclick="testErrorHandling()">Test 3: Manejo de Errores</button>
+    <button onclick="testSyncFunction()">Test 4: Sincronización</button>
+    <button onclick="runAllTests()">🚀 Ejecutar Todos los Tests</button>
+    
+    <div id="store-state">
+        <h3>Estado Actual del Store:</h3>
+        <pre id="store-content">Cargando...</pre>
+    </div>
+
+    <script type="module">
+        // Simulamos las funciones de API para testing
+        window.mockAPI = {
+            fetchReservas: async () => {
+                // Simular delay de red
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                return [
+                    {
+                        id: "TEST-001",
+                        nombre: "Test Usuario",
+                        numero: "+57 123 456 7890",
+                        email: "test@example.com",
+                        numeroPersonas: 2,
+                        fechaEntrada: "2025-08-15",
+                        fechaSalida: "2025-08-17",
+                        domo: "Test Domo",
+                        servicios: [],
+                        montoAPagar: 300000,
+                        metodoPago: "Efectivo",
+                        observaciones: "Reserva de prueba"
+                    }
+                ];
+            },
+            
+            fetchReservasError: async () => {
+                await new Promise(resolve => setTimeout(resolve, 500));
+                throw new Error("Error de conexión simulado");
+            }
+        };
+
+        // Simulamos Zustand store para testing
+        window.testStore = {
+            reservasHuespedes: [],
+            isLoading: false,
+            lastSync: null,
+            syncError: null,
+            
+            set: function(newState) {
+                Object.assign(this, newState);
+                updateStoreDisplay();
+            },
+            
+            get: function() {
+                return this;
+            },
+            
+            cargarReservas: async function() {
+                this.set({ isLoading: true, syncError: null });
+                try {
+                    const reservas = await window.mockAPI.fetchReservas();
+                    this.set({ 
+                        reservasHuespedes: reservas || [],
+                        lastSync: new Date().toISOString(),
+                        isLoading: false,
+                        syncError: null
+                    });
+                } catch (error) {
+                    console.error('Error cargando reservas:', error);
+                    this.set({ 
+                        syncError: error.message,
+                        isLoading: false
+                    });
+                }
+            },
+            
+            cargarReservasConError: async function() {
+                this.set({ isLoading: true, syncError: null });
+                try {
+                    const reservas = await window.mockAPI.fetchReservasError();
+                    this.set({ 
+                        reservasHuespedes: reservas || [],
+                        lastSync: new Date().toISOString(),
+                        isLoading: false,
+                        syncError: null
+                    });
+                } catch (error) {
+                    console.error('Error cargando reservas:', error);
+                    this.set({ 
+                        syncError: error.message,
+                        isLoading: false
+                    });
+                }
+            }
+        };
+
+        function updateStoreDisplay() {
+            const storeContent = document.getElementById('store-content');
+            storeContent.textContent = JSON.stringify(window.testStore, null, 2);
+        }
+
+        function addTestResult(testName, passed, message) {
+            const resultsDiv = document.getElementById('test-results');
+            const testDiv = document.createElement('div');
+            testDiv.className = `test ${passed ? 'pass' : 'fail'}`;
+            testDiv.innerHTML = `
+                <strong>${passed ? '✅' : '❌'} ${testName}</strong>
+                <p>${message}</p>
+            `;
+            resultsDiv.appendChild(testDiv);
+        }
+
+        window.testStoreInitialization = function() {
+            const store = window.testStore;
+            
+            // Reset store
+            store.reservasHuespedes = [];
+            store.isLoading = false;
+            store.lastSync = null;
+            store.syncError = null;
+            
+            const passed = Array.isArray(store.reservasHuespedes) && 
+                          store.reservasHuespedes.length === 0 &&
+                          store.isLoading === false &&
+                          store.lastSync === null &&
+                          store.syncError === null;
+            
+            addTestResult(
+                "Inicialización del Store", 
+                passed, 
+                passed ? "Store se inicializa correctamente con array vacío" : "Store no se inicializa correctamente"
+            );
+            
+            updateStoreDisplay();
+        };
+
+        window.testLoadReservas = async function() {
+            const store = window.testStore;
+            
+            // Reset store
+            store.reservasHuespedes = [];
+            store.isLoading = false;
+            store.lastSync = null;
+            store.syncError = null;
+            
+            await store.cargarReservas();
+            
+            const passed = Array.isArray(store.reservasHuespedes) && 
+                          store.reservasHuespedes.length > 0 &&
+                          store.isLoading === false &&
+                          store.lastSync !== null &&
+                          store.syncError === null;
+            
+            addTestResult(
+                "Función cargarReservas", 
+                passed, 
+                passed ? `Reservas cargadas correctamente: ${store.reservasHuespedes.length} registros` : "Error al cargar reservas"
+            );
+            
+            updateStoreDisplay();
+        };
+
+        window.testErrorHandling = async function() {
+            const store = window.testStore;
+            
+            // Reset store
+            store.reservasHuespedes = [];
+            store.isLoading = false;
+            store.lastSync = null;
+            store.syncError = null;
+            
+            await store.cargarReservasConError();
+            
+            const passed = store.isLoading === false &&
+                          store.syncError !== null &&
+                          store.syncError.includes("Error de conexión simulado");
+            
+            addTestResult(
+                "Manejo de Errores", 
+                passed, 
+                passed ? `Error manejado correctamente: ${store.syncError}` : "Error no manejado correctamente"
+            );
+            
+            updateStoreDisplay();
+        };
+
+        window.testSyncFunction = async function() {
+            const store = window.testStore;
+            
+            // Test múltiples sincronizaciones
+            await store.cargarReservas();
+            const firstSync = store.lastSync;
+            
+            // Esperar un momento y sincronizar de nuevo
+            await new Promise(resolve => setTimeout(resolve, 100));
+            await store.cargarReservas();
+            const secondSync = store.lastSync;
+            
+            const passed = firstSync !== secondSync && 
+                          store.reservasHuespedes.length > 0;
+            
+            addTestResult(
+                "Función de Sincronización", 
+                passed, 
+                passed ? "Sincronización funciona correctamente con timestamps actualizados" : "Error en la sincronización"
+            );
+            
+            updateStoreDisplay();
+        };
+
+        window.runAllTests = async function() {
+            document.getElementById('test-results').innerHTML = '';
+            
+            console.log("🚀 Iniciando batería completa de tests...");
+            
+            testStoreInitialization();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testLoadReservas();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testErrorHandling();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            await testSyncFunction();
+            
+            console.log("✅ Tests completados");
+        };
+
+        // Inicializar display
+        updateStoreDisplay();
+    </script>
+</body>
+</html>
