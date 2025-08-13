@@ -114,6 +114,26 @@ export default function Reservas() {
     cargarReservasIniciales();
   }, [cargarReservas]); // Agregar cargarReservas como dependencia
 
+  // Debug: Mostrar estructura de datos en consola (solo en desarrollo)
+  useEffect(() => {
+    if (import.meta.env.DEV && reservasHuespedes.length > 0) {
+      console.group('🔍 Debug: Estructura de reservas cargadas');
+      console.log('📊 Total de reservas:', reservasHuespedes.length);
+      console.log('📋 Primera reserva (estructura):', reservasHuespedes[0]);
+      console.log('🏷️ Campos disponibles:', Object.keys(reservasHuespedes[0] || {}));
+
+      // Verificar servicios
+      const reservasConServicios = reservasHuespedes.filter(r => r.servicios && r.servicios.length > 0);
+      console.log('🛎️ Reservas con servicios:', reservasConServicios.length);
+
+      if (reservasConServicios.length > 0) {
+        console.log('🎯 Ejemplo de servicios:', reservasConServicios[0].servicios);
+      }
+
+      console.groupEnd();
+    }
+  }, [reservasHuespedes]);
+
   // Sincronización en tiempo real - Polling cada 30 segundos (5 segundos en desarrollo para testing)
   useEffect(() => {
     const syncInterval = import.meta.env.DEV ? 5000 : 30000; // 5s dev, 30s prod
@@ -389,16 +409,30 @@ export default function Reservas() {
                     </span>
                   </td>
                   <td className="px-3 py-4">
-                    {huesped.servicios.length === 0 ? (
-                      <span className={`${tema === 'claro' ? 'text-gray-500' : 'text-gray-400'}`}>N/A</span>
+                    {!huesped.servicios || huesped.servicios.length === 0 ? (
+                      <div className="flex flex-col">
+                        <span className={`text-xs ${tema === 'claro' ? 'text-gray-500' : 'text-gray-400'}`}>
+                          Sin servicios
+                        </span>
+                        {huesped.servicio_elegido && huesped.servicio_elegido !== 'Ninguno' && (
+                          <span className="text-xs text-blue-600 mt-1">
+                            {huesped.servicio_elegido}
+                          </span>
+                        )}
+                      </div>
                     ) : (
-                      <button
-                        onClick={() => abrirModalServicios(huesped.servicios)}
-                        className="text-blue-600 hover:text-blue-800 underline flex items-center gap-1"
-                      >
-                        <Eye size={14} />
-                        ver más
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => abrirModalServicios(huesped.servicios)}
+                          className="text-blue-600 hover:text-blue-800 underline flex items-center gap-1 text-sm"
+                        >
+                          <Eye size={14} />
+                          {huesped.servicios.length} servicio{huesped.servicios.length !== 1 ? 's' : ''}
+                        </button>
+                        <span className="text-xs text-green-600 font-medium">
+                          ${huesped.servicios.reduce((total, s) => total + (s.precio || 0), 0).toLocaleString()}
+                        </span>
+                      </div>
                     )}
                   </td>
                   <td className="px-3 py-4 font-medium text-green-600">
@@ -546,16 +580,30 @@ export default function Reservas() {
                 <p className={`text-xs font-medium ${tema === 'claro' ? 'text-gray-500' : 'text-gray-400'}`}>
                   SERVICIOS
                 </p>
-                {huesped.servicios.length === 0 ? (
-                  <span className={`text-sm ${tema === 'claro' ? 'text-gray-500' : 'text-gray-400'}`}>N/A</span>
+                {!huesped.servicios || huesped.servicios.length === 0 ? (
+                  <div className="flex flex-col">
+                    <span className={`text-sm ${tema === 'claro' ? 'text-gray-500' : 'text-gray-400'}`}>
+                      Sin servicios
+                    </span>
+                    {huesped.servicio_elegido && huesped.servicio_elegido !== 'Ninguno' && (
+                      <span className="text-sm text-blue-600 mt-1">
+                        {huesped.servicio_elegido}
+                      </span>
+                    )}
+                  </div>
                 ) : (
-                  <button
-                    onClick={() => abrirModalServicios(huesped.servicios)}
-                    className="text-blue-600 hover:text-blue-800 underline flex items-center gap-1 text-sm"
-                  >
-                    <Eye size={14} />
-                    {huesped.servicios.length} servicios
-                  </button>
+                  <div className="flex flex-col gap-1">
+                    <button
+                      onClick={() => abrirModalServicios(huesped.servicios)}
+                      className="text-blue-600 hover:text-blue-800 underline flex items-center gap-1 text-sm self-start"
+                    >
+                      <Eye size={14} />
+                      {huesped.servicios.length} servicio{huesped.servicios.length !== 1 ? 's' : ''}
+                    </button>
+                    <span className="text-sm text-green-600 font-medium">
+                      Total: ${huesped.servicios.reduce((total, s) => total + (s.precio || 0), 0).toLocaleString()}
+                    </span>
+                  </div>
                 )}
               </div>
               <div>
@@ -623,20 +671,39 @@ export default function Reservas() {
             </div>
             <div className="space-y-2">
               {modalServicios.map((servicio, index) => (
-                <div key={index} className={`p-3 rounded border ${
-                  tema === 'claro' ? 'border-gray-200 bg-gray-50' : 'border-gray-600 bg-gray-700'
+                <div key={index} className={`p-3 rounded border transition-colors ${
+                  tema === 'claro' ? 'border-gray-200 bg-gray-50 hover:bg-gray-100' : 'border-gray-600 bg-gray-700 hover:bg-gray-600'
                 }`}>
-                  <div className="font-medium">{servicio.nombre}</div>
-                  <div className={`text-sm ${tema === 'claro' ? 'text-gray-600' : 'text-gray-400'}`}>
-                    Precio: ${servicio.precio.toLocaleString()}
+                  <div className="flex justify-between items-start">
+                    <div className="font-medium text-base">{servicio.nombre || `Servicio ${index + 1}`}</div>
+                    <div className="text-lg font-bold text-green-600">
+                      ${(servicio.precio || 0).toLocaleString()}
+                    </div>
                   </div>
                   {servicio.descripcion && (
-                    <div className={`text-sm mt-1 ${tema === 'claro' ? 'text-gray-500' : 'text-gray-300'}`}>
+                    <div className={`text-sm mt-2 ${tema === 'claro' ? 'text-gray-600' : 'text-gray-300'}`}>
                       {servicio.descripcion}
                     </div>
                   )}
+                  <div className={`text-xs mt-2 px-2 py-1 rounded ${
+                    tema === 'claro' ? 'bg-blue-100 text-blue-700' : 'bg-blue-900 text-blue-300'
+                  }`}>
+                    Servicio adicional
+                  </div>
                 </div>
               ))}
+            </div>
+            
+            {/* Mostrar total de servicios */}
+            <div className={`mt-4 p-3 rounded border-t-2 ${
+              tema === 'claro' ? 'border-green-200 bg-green-50' : 'border-green-700 bg-green-900/20'
+            }`}>
+              <div className="flex justify-between items-center">
+                <span className="font-medium">Total servicios:</span>
+                <span className="text-xl font-bold text-green-600">
+                  ${modalServicios.reduce((total, servicio) => total + (servicio.precio || 0), 0).toLocaleString()}
+                </span>
+              </div>
             </div>
           </div>
         </div>

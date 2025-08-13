@@ -71,18 +71,65 @@ export const fetchReservas = async () => {
     const data = await response.json();
     console.log(`✅ Datos recibidos:`, data);
 
-    // Adaptamos la respuesta para que sea compatible con el frontend
+    // Adaptamos y validamos la respuesta para que sea compatible con el frontend
     if (data.reservas && Array.isArray(data.reservas)) {
+      // Validar y transformar cada reserva
+      const reservasValidadas = data.reservas.map(reserva => {
+        return {
+          ...reserva,
+          // Asegurar que los servicios sean siempre un array
+          servicios: Array.isArray(reserva.servicios) ? reserva.servicios : [],
+          // Asegurar que el monto sea un número
+          montoAPagar: typeof reserva.montoAPagar === 'number' ? reserva.montoAPagar : 0,
+          // Validar fechas
+          fechaEntrada: reserva.fechaEntrada || null,
+          fechaSalida: reserva.fechaSalida || null,
+          // Valores por defecto para campos obligatorios
+          nombre: reserva.nombre || 'No especificado',
+          email: reserva.email || 'No proporcionado',
+          numero: reserva.numero || 'No proporcionado',
+          numeroPersonas: reserva.numeroPersonas || 1,
+          domo: reserva.domo || 'No especificado',
+          metodoPago: reserva.metodoPago || 'Pendiente',
+          observaciones: reserva.observaciones || ''
+        };
+      });
+
+      console.log(`✅ ${reservasValidadas.length} reservas validadas y transformadas`);
+
       return {
-        reservas: data.reservas,
-        total: data.total || data.reservas.length,
+        reservas: reservasValidadas,
+        total: data.count || data.total || reservasValidadas.length,
         status: 'success'
       };
     } else if (Array.isArray(data)) {
       // En caso de que solo venga el array de reservas
+      const reservasValidadas = data.map(reserva => {
+        return {
+          ...reserva,
+          // Asegurar que los servicios sean siempre un array
+          servicios: Array.isArray(reserva.servicios) ? reserva.servicios : [],
+          // Asegurar que el monto sea un número
+          montoAPagar: typeof reserva.montoAPagar === 'number' ? reserva.montoAPagar : 0,
+          // Validar fechas
+          fechaEntrada: reserva.fechaEntrada || null,
+          fechaSalida: reserva.fechaSalida || null,
+          // Valores por defecto para campos obligatorios
+          nombre: reserva.nombre || 'No especificado',
+          email: reserva.email || 'No proporcionado',
+          numero: reserva.numero || 'No proporcionado',
+          numeroPersonas: reserva.numeroPersonas || 1,
+          domo: reserva.domo || 'No especificado',
+          metodoPago: reserva.metodoPago || 'Pendiente',
+          observaciones: reserva.observaciones || ''
+        };
+      });
+
+      console.log(`✅ ${reservasValidadas.length} reservas validadas y transformadas (formato directo)`);
+
       return {
-        reservas: data,
-        total: data.length,
+        reservas: reservasValidadas,
+        total: reservasValidadas.length,
         status: 'success'
       };
     } else {
@@ -232,6 +279,35 @@ export const checkApiHealth = async () => {
   }
 };
 
+// Función para validar estructura de reserva
+export const validarReserva = (reserva) => {
+  const camposRequeridos = ['id', 'nombre', 'email', 'numero', 'domo', 'fechaEntrada', 'fechaSalida'];
+  const camposOpcionales = ['servicios', 'montoAPagar', 'metodoPago', 'observaciones', 'numeroPersonas'];
+
+  const errores = [];
+
+  // Verificar campos requeridos
+  camposRequeridos.forEach(campo => {
+    if (!reserva[campo] || reserva[campo] === 'No especificado') {
+      errores.push(`Campo requerido faltante o inválido: ${campo}`);
+    }
+  });
+
+  // Verificar tipos de datos
+  if (reserva.servicios && !Array.isArray(reserva.servicios)) {
+    errores.push('El campo servicios debe ser un array');
+  }
+
+  if (reserva.montoAPagar && typeof reserva.montoAPagar !== 'number') {
+    errores.push('El campo montoAPagar debe ser un número');
+  }
+
+  return {
+    esValida: errores.length === 0,
+    errores: errores
+  };
+};
+
 export default {
   fetchReservas,
   fetchReservasWithCache,
@@ -241,5 +317,6 @@ export default {
   deleteReserva,
   fetchReservaById,
   syncReservas,
-  checkApiHealth
+  checkApiHealth,
+  validarReserva
 };
