@@ -73,26 +73,40 @@ export const fetchReservas = async () => {
 
     // Adaptamos y validamos la respuesta para que sea compatible con el frontend
     if (data.reservas && Array.isArray(data.reservas)) {
-      // Validar y transformar cada reserva
+      // Validar y transformar cada reserva con prioridad en campos importantes
       const reservasValidadas = data.reservas.map(reserva => {
-        return {
+        // ASEGURAR CAMPOS IMPORTANTES
+        const reservaValidada = {
           ...reserva,
-          // Asegurar que los servicios sean siempre un array
+          // CAMPOS IMPORTANTES - Con valores por defecto estrictos
+          numero: reserva.numero || reserva.telefono || 'REQUERIDO',
+          email: reserva.email || reserva.email_contacto || 'REQUERIDO',
+          numeroPersonas: parseInt(reserva.numeroPersonas || reserva.cantidad_huespedes) || 1,
+          domo: reserva.domo || 'REQUERIDO',
+          fechaEntrada: reserva.fechaEntrada || reserva.fecha_entrada || null,
+          fechaSalida: reserva.fechaSalida || reserva.fecha_salida || null,
+          metodoPago: reserva.metodoPago || reserva.metodo_pago || 'REQUERIDO',
+
+          // CAMPOS OPCIONALES - Pueden estar vacíos sin problema
           servicios: Array.isArray(reserva.servicios) ? reserva.servicios : [],
-          // Asegurar que el monto sea un número
-          montoAPagar: typeof reserva.montoAPagar === 'number' ? reserva.montoAPagar : 0,
-          // Validar fechas
-          fechaEntrada: reserva.fechaEntrada || null,
-          fechaSalida: reserva.fechaSalida || null,
-          // Valores por defecto para campos obligatorios
-          nombre: reserva.nombre || 'No especificado',
-          email: reserva.email || 'No proporcionado',
-          numero: reserva.numero || 'No proporcionado',
-          numeroPersonas: reserva.numeroPersonas || 1,
-          domo: reserva.domo || 'No especificado',
-          metodoPago: reserva.metodoPago || 'Pendiente',
-          observaciones: reserva.observaciones || ''
+          adicciones: reserva.adicciones || '',
+          observaciones: reserva.observaciones || reserva.comentarios_especiales || '',
+          nombre: reserva.nombre || reserva.nombres_huespedes || `Usuario ${reserva.numero}`,
+
+          // METADATOS
+          montoAPagar: typeof reserva.montoAPagar === 'number' ? reserva.montoAPagar : parseFloat(reserva.monto_total) || 0
         };
+
+        // Agregar indicadores de completitud
+        const validacion = validarReserva(reservaValidada);
+        reservaValidada._validacion = {
+          esValida: validacion.esValida,
+          esCompleta: validacion.esCompleta,
+          camposImportantesFaltantes: validacion.camposImportantesFaltantes.length,
+          camposOpcionalesFaltantes: validacion.camposOpcionalesFaltantes.length
+        };
+
+        return reservaValidada;
       });
 
       console.log(`✅ ${reservasValidadas.length} reservas validadas y transformadas`);
@@ -105,24 +119,38 @@ export const fetchReservas = async () => {
     } else if (Array.isArray(data)) {
       // En caso de que solo venga el array de reservas
       const reservasValidadas = data.map(reserva => {
-        return {
+        // ASEGURAR CAMPOS IMPORTANTES
+        const reservaValidada = {
           ...reserva,
-          // Asegurar que los servicios sean siempre un array
+          // CAMPOS IMPORTANTES - Con valores por defecto estrictos
+          numero: reserva.numero || reserva.telefono || 'REQUERIDO',
+          email: reserva.email || reserva.email_contacto || 'REQUERIDO',
+          numeroPersonas: parseInt(reserva.numeroPersonas || reserva.cantidad_huespedes) || 1,
+          domo: reserva.domo || 'REQUERIDO',
+          fechaEntrada: reserva.fechaEntrada || reserva.fecha_entrada || null,
+          fechaSalida: reserva.fechaSalida || reserva.fecha_salida || null,
+          metodoPago: reserva.metodoPago || reserva.metodo_pago || 'REQUERIDO',
+
+          // CAMPOS OPCIONALES - Pueden estar vacíos sin problema
           servicios: Array.isArray(reserva.servicios) ? reserva.servicios : [],
-          // Asegurar que el monto sea un número
-          montoAPagar: typeof reserva.montoAPagar === 'number' ? reserva.montoAPagar : 0,
-          // Validar fechas
-          fechaEntrada: reserva.fechaEntrada || null,
-          fechaSalida: reserva.fechaSalida || null,
-          // Valores por defecto para campos obligatorios
-          nombre: reserva.nombre || 'No especificado',
-          email: reserva.email || 'No proporcionado',
-          numero: reserva.numero || 'No proporcionado',
-          numeroPersonas: reserva.numeroPersonas || 1,
-          domo: reserva.domo || 'No especificado',
-          metodoPago: reserva.metodoPago || 'Pendiente',
-          observaciones: reserva.observaciones || ''
+          adicciones: reserva.adicciones || '',
+          observaciones: reserva.observaciones || reserva.comentarios_especiales || '',
+          nombre: reserva.nombre || reserva.nombres_huespedes || `Usuario ${reserva.numero}`,
+
+          // METADATOS
+          montoAPagar: typeof reserva.montoAPagar === 'number' ? reserva.montoAPagar : parseFloat(reserva.monto_total) || 0
         };
+
+        // Agregar indicadores de completitud
+        const validacion = validarReserva(reservaValidada);
+        reservaValidada._validacion = {
+          esValida: validacion.esValida,
+          esCompleta: validacion.esCompleta,
+          camposImportantesFaltantes: validacion.camposImportantesFaltantes.length,
+          camposOpcionalesFaltantes: validacion.camposOpcionalesFaltantes.length
+        };
+
+        return reservaValidada;
       });
 
       console.log(`✅ ${reservasValidadas.length} reservas validadas y transformadas (formato directo)`);
@@ -279,19 +307,67 @@ export const checkApiHealth = async () => {
   }
 };
 
-// Función para validar estructura de reserva
+// Función para validar estructura de reserva con campos importantes vs opcionales
 export const validarReserva = (reserva) => {
-  const camposRequeridos = ['id', 'nombre', 'email', 'numero', 'domo', 'fechaEntrada', 'fechaSalida'];
-  const camposOpcionales = ['servicios', 'montoAPagar', 'metodoPago', 'observaciones', 'numeroPersonas'];
+  // CAMPOS IMPORTANTES (obligatorios)
+  const camposImportantes = {
+    'numero': 'Teléfono',
+    'email': 'Email',
+    'numeroPersonas': 'Número de personas',
+    'domo': 'Domo',
+    'fechaEntrada': 'Fecha de entrada',
+    'fechaSalida': 'Fecha de salida',
+    'metodoPago': 'Método de pago'
+  };
+
+  // CAMPOS OPCIONALES (pueden estar vacíos)
+  const camposOpcionales = ['adicciones', 'servicios', 'observaciones', 'nombre'];
 
   const errores = [];
+  const advertencias = [];
 
-  // Verificar campos requeridos
-  camposRequeridos.forEach(campo => {
-    if (!reserva[campo] || reserva[campo] === 'No especificado') {
-      errores.push(`Campo requerido faltante o inválido: ${campo}`);
+  // Verificar CAMPOS IMPORTANTES
+  Object.entries(camposImportantes).forEach(([campo, nombreAmigable]) => {
+    if (!reserva[campo] ||
+        reserva[campo] === 'No especificado' ||
+        reserva[campo] === 'No proporcionado' ||
+        reserva[campo] === 'Pendiente') {
+      errores.push(`Campo importante faltante: ${nombreAmigable}`);
     }
   });
+
+  // Validaciones específicas para campos importantes
+  if (reserva.numeroPersonas && (reserva.numeroPersonas < 1 || reserva.numeroPersonas > 10)) {
+    errores.push('Número de personas debe estar entre 1 y 10');
+  }
+
+  if (reserva.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(reserva.email)) {
+    errores.push('Email no tiene formato válido');
+  }
+
+  if (reserva.domo) {
+    const domosValidos = ['antares', 'polaris', 'sirius', 'centaury'];
+    if (!domosValidos.includes(reserva.domo.toLowerCase())) {
+      errores.push('Domo no válido');
+    }
+  }
+
+  // Verificar CAMPOS OPCIONALES (solo advertencias)
+  if (!reserva.nombre || reserva.nombre === 'No especificado') {
+    advertencias.push('Nombre del huésped no especificado');
+  }
+
+  if (!reserva.servicios || reserva.servicios.length === 0) {
+    advertencias.push('Sin servicios adicionales');
+  }
+
+  if (!reserva.adicciones) {
+    advertencias.push('Sin adiciones especificadas');
+  }
+
+  if (!reserva.observaciones) {
+    advertencias.push('Sin comentarios adicionales');
+  }
 
   // Verificar tipos de datos
   if (reserva.servicios && !Array.isArray(reserva.servicios)) {
@@ -304,7 +380,11 @@ export const validarReserva = (reserva) => {
 
   return {
     esValida: errores.length === 0,
-    errores: errores
+    esCompleta: errores.length === 0 && advertencias.length === 0,
+    errores: errores,
+    advertencias: advertencias,
+    camposImportantesFaltantes: errores.filter(e => e.includes('Campo importante')),
+    camposOpcionalesFaltantes: advertencias
   };
 };
 

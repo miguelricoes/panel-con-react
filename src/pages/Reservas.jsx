@@ -1,7 +1,48 @@
 import { useState, useMemo, useEffect } from "react";
 import { useStore } from "../store/useStore";
 import { useConfigStore } from "../store/configStore";
-import { Eye, Mail, X, FileText, Filter, Search, Users, Calendar, RefreshCw, AlertCircle } from "lucide-react";
+import { Eye, Mail, X, FileText, Filter, Search, Users, Calendar, RefreshCw, AlertCircle, AlertTriangle, CheckCircle } from "lucide-react";
+
+// Componente para indicador de completitud de campos
+const IndicadorCompletitud = ({ reserva, tema }) => {
+  const { _validacion } = reserva;
+
+  if (!_validacion) return null;
+
+  const { esValida, esCompleta, camposImportantesFaltantes, camposOpcionalesFaltantes } = _validacion;
+
+  if (!esValida) {
+    // Campos importantes faltantes - CRÍTICO
+    return (
+      <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
+        tema === 'claro' ? 'bg-red-100 text-red-800' : 'bg-red-900 text-red-200'
+      }`} title="Faltan campos importantes">
+        <AlertCircle size={12} />
+        Incompleta
+      </div>
+    );
+  } else if (!esCompleta) {
+    // Solo campos opcionales faltantes - ADVERTENCIA
+    return (
+      <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
+        tema === 'claro' ? 'bg-yellow-100 text-yellow-800' : 'bg-yellow-900 text-yellow-200'
+      }`} title="Campos opcionales faltantes">
+        <AlertTriangle size={12} />
+        Básica
+      </div>
+    );
+  } else {
+    // Todo completo - PERFECTO
+    return (
+      <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
+        tema === 'claro' ? 'bg-green-100 text-green-800' : 'bg-green-900 text-green-200'
+      }`} title="Todos los campos completos">
+        <CheckCircle size={12} />
+        Completa
+      </div>
+    );
+  }
+};
 
 export default function Reservas() {
   const { reservasHuespedes, cargarReservas } = useStore();
@@ -21,7 +62,8 @@ export default function Reservas() {
     domo: '',
     numeroPersonas: '',
     fechaBusqueda: '',
-    nombre: ''
+    nombre: '',
+    completitud: ''
   });
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
 
@@ -52,7 +94,7 @@ export default function Reservas() {
     setMensajeCorreo("");
   };
 
-  // Función para filtrar reservas
+  // Función para filtrar reservas - ACTUALIZADA
   const reservasFiltradas = useMemo(() => {
     return reservasHuespedes.filter(reserva => {
       // Filtro por domo
@@ -71,6 +113,23 @@ export default function Reservas() {
         const fechaSalida = new Date(reserva.fechaSalida);
         if (fechaBusqueda < fechaEntrada || fechaBusqueda > fechaSalida) return false;
       }
+
+      // NUEVO: Filtro por completitud
+      if (filtros.completitud) {
+        const validacion = reserva._validacion;
+        if (!validacion) return true; // Si no hay validación, mostrar
+
+        switch (filtros.completitud) {
+          case 'incompletas':
+            return !validacion.esValida;
+          case 'basicas':
+            return validacion.esValida && !validacion.esCompleta;
+          case 'completas':
+            return validacion.esCompleta;
+          default:
+            return true;
+        }
+      }
       
       return true;
     });
@@ -82,7 +141,8 @@ export default function Reservas() {
       domo: '',
       numeroPersonas: '',
       fechaBusqueda: '',
-      nombre: ''
+      nombre: '',
+      completitud: ''
     });
   };
 
@@ -324,6 +384,28 @@ export default function Reservas() {
                   Busca huéspedes que estén en el glamping en esta fecha
                 </p>
               </div>
+              
+              {/* Filtro por completitud */}
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  <AlertCircle size={14} className="inline mr-1" />
+                  Estado de campos
+                </label>
+                <select
+                  value={filtros.completitud || ''}
+                  onChange={(e) => setFiltros({...filtros, completitud: e.target.value})}
+                  className={`w-full px-3 py-2 rounded border text-sm ${
+                    tema === 'claro'
+                      ? 'border-gray-300 bg-white text-gray-900'
+                      : 'border-gray-600 bg-gray-700 text-white'
+                  }`}
+                >
+                  <option value="">Todas las reservas</option>
+                  <option value="incompletas">Solo incompletas (faltan campos importantes)</option>
+                  <option value="basicas">Solo básicas (faltan campos opcionales)</option>
+                  <option value="completas">Solo completas</option>
+                </select>
+              </div>
             </div>
 
             {/* Botones de acción */}
@@ -354,6 +436,7 @@ export default function Reservas() {
             }`}>
               <tr>
                 <th className="px-2 py-4 text-left font-semibold w-20">ID</th>
+                <th className="px-2 py-4 text-left font-semibold w-20 text-center">Estado</th>
                 <th className="px-3 py-4 text-left font-semibold w-48">Nombre</th>
                 <th className="px-2 py-4 text-left font-semibold w-32">Número</th>
                 <th className="px-3 py-4 text-left font-semibold w-48">Email</th>
@@ -374,6 +457,9 @@ export default function Reservas() {
                   tema === 'claro' ? 'border-gray-200 hover:bg-gray-50' : 'border-gray-600 hover:bg-gray-700'
                 }`}>
                   <td className="px-2 py-4 font-mono text-xs">{huesped.id}</td>
+                  <td className="px-2 py-4 text-center">
+                    <IndicadorCompletitud reserva={huesped} tema={tema} />
+                  </td>
                   <td className="px-3 py-4 font-medium">{huesped.nombre}</td>
                   <td className="px-2 py-4 text-xs">{huesped.numero}</td>
                   <td className="px-3 py-4">
@@ -500,7 +586,8 @@ export default function Reservas() {
                   {huesped.id}
                 </p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
+                <IndicadorCompletitud reserva={huesped} tema={tema} />
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                   huesped.domo === 'Centary' ? (tema === 'claro' ? 'bg-purple-100 text-purple-800' : 'bg-purple-900 text-purple-200') :
                   huesped.domo === 'Polaris' ? (tema === 'claro' ? 'bg-green-100 text-green-800' : 'bg-green-900 text-green-200') :
