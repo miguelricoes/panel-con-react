@@ -1,9 +1,31 @@
 // src/components/Header.jsx
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useConfigStore } from "../store/configStore";
+import { checkApiHealth } from '../api/reservasApi';
 
 export default function Header({ onLogout }) {
   const tema = useConfigStore((state) => state.tema);
+  
+  // Estado para conexión
+  const [isApiConnected, setIsApiConnected] = useState(null);
+
+  // useEffect para monitorear conexión
+  useEffect(() => {
+    const checkConnection = async () => {
+      try {
+        const isConnected = await checkApiHealth();
+        setIsApiConnected(isConnected);
+      } catch (error) {
+        setIsApiConnected(false);
+      }
+    };
+
+    // Verificar conexión cada 30 segundos
+    checkConnection();
+    const interval = setInterval(checkConnection, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <header className={`px-3 sm:px-6 py-3 sm:py-4 flex justify-between items-center shadow ${
@@ -11,10 +33,25 @@ export default function Header({ onLogout }) {
         ? 'bg-white text-gray-900 border-b border-gray-200' 
         : 'bg-gray-900 text-white'
     }`}>
-      <h1 className="text-lg sm:text-xl font-bold">
-        <span className="hidden sm:inline">Panel de Administración</span>
-        <span className="sm:hidden">Panel Admin</span>
-      </h1>
+      <div className="flex items-center gap-4">
+        <h1 className="text-lg sm:text-xl font-bold">
+          <span className="hidden sm:inline">Panel de Administración</span>
+          <span className="sm:hidden">Panel Admin</span>
+        </h1>
+        
+        {isApiConnected !== null && (
+          <div className={`flex items-center gap-2 text-sm ${
+            isApiConnected
+              ? 'text-green-600 dark:text-green-400'
+              : 'text-red-600 dark:text-red-400'
+          }`}>
+            <div className={`w-2 h-2 rounded-full ${
+              isApiConnected ? 'bg-green-500' : 'bg-red-500'
+            }`}></div>
+            {isApiConnected ? 'API Conectada' : 'API Desconectada'}
+          </div>
+        )}
+      </div>
       <button
         onClick={onLogout}
         className="bg-red-600 hover:bg-red-700 text-white px-3 sm:px-4 py-2 rounded text-sm sm:text-base"

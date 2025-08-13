@@ -3,8 +3,44 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://agente-glamping-pr
 // Import mock API para testing
 import { mockFetchReservas } from './mockApi';
 
-// Flag para habilitar modo mock durante desarrollo/testing
+// Flag para habilitar modo mock - CAMBIAR A false PARA PRODUCCIÓN
 const ENABLE_MOCK = import.meta.env.VITE_ENABLE_MOCK === 'true' || false;
+
+console.log('🔧 Configuración API:', {
+  API_BASE_URL,
+  ENABLE_MOCK,
+  env: import.meta.env.VITE_ENABLE_MOCK
+});
+
+// Cache simple para reservas
+let reservasCache = null;
+let cacheTimestamp = null;
+const CACHE_DURATION = 30000; // 30 segundos
+
+// Función con cache
+export const fetchReservasWithCache = async (forceRefresh = false) => {
+  const now = Date.now();
+
+  if (!forceRefresh && reservasCache && cacheTimestamp && (now - cacheTimestamp < CACHE_DURATION)) {
+    console.log('📦 Usando datos del cache');
+    return reservasCache;
+  }
+
+  console.log('🔄 Cache expirado o forzando refresh - obteniendo datos frescos');
+  const data = await fetchReservas();
+  reservasCache = data;
+  cacheTimestamp = now;
+  console.log(`✅ Cache actualizado - válido por ${CACHE_DURATION / 1000} segundos`);
+
+  return data;
+};
+
+// Función para limpiar cache
+export const clearReservasCache = () => {
+  console.log('🗑️ Limpiando cache de reservas');
+  reservasCache = null;
+  cacheTimestamp = null;
+};
 
 // Función para obtener todas las reservas
 export const fetchReservas = async () => {
@@ -15,21 +51,54 @@ export const fetchReservas = async () => {
   }
 
   try {
+    console.log(`🚀 Fetching reservas desde: ${API_BASE_URL}/api/reservas`);
+
     const response = await fetch(`${API_BASE_URL}/api/reservas`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json'
       },
+      mode: 'cors'  // Importante para CORS
     });
-    
+
+    console.log(`📡 Respuesta recibida:`, response.status, response.statusText);
+
     if (!response.ok) {
-      throw new Error(`Error: ${response.status} ${response.statusText}`);
+      throw new Error(`Error HTTP: ${response.status} ${response.statusText}`);
     }
-    
+
     const data = await response.json();
-    return data;
+    console.log(`✅ Datos recibidos:`, data);
+
+    // Adaptamos la respuesta para que sea compatible con el frontend
+    if (data.reservas && Array.isArray(data.reservas)) {
+      return {
+        reservas: data.reservas,
+        total: data.total || data.reservas.length,
+        status: 'success'
+      };
+    } else if (Array.isArray(data)) {
+      // En caso de que solo venga el array de reservas
+      return {
+        reservas: data,
+        total: data.length,
+        status: 'success'
+      };
+    } else {
+      throw new Error('Formato de datos inválido recibido del servidor');
+    }
+
   } catch (error) {
-    console.error('Error fetching reservas:', error);
+    console.error('❌ Error fetching reservas:', error);
+
+    // Log detallado para debugging
+    console.error('Detalles del error:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
+
     throw error;
   }
 };
@@ -165,6 +234,8 @@ export const checkApiHealth = async () => {
 
 export default {
   fetchReservas,
+  fetchReservasWithCache,
+  clearReservasCache,
   createReserva,
   updateReserva,
   deleteReserva,

@@ -188,22 +188,35 @@ export const useStore = create((set, get) => ({
   // Función principal para cargar reservas (versión simplificada)
   cargarReservas: async () => {
     set({ isLoading: true, syncError: null });
+
     try {
-      const reservas = await fetchReservas();
-      set({ 
-        reservasHuespedes: reservas || [],
-        lastSync: new Date().toISOString(),
-        isLoading: false,
-        syncError: null
-      });
-      // Actualizar días reservados después de cargar las reservas
-      const state = get();
-      state.actualizarDiasReservados();
+      console.log('🚀 Store: Cargando reservas desde API...');
+
+      const data = await fetchReservas(); // Función de reservasApi.js
+
+      if (data && data.reservas) {
+        set({
+          reservasHuespedes: data.reservas,
+          isLoading: false,
+          lastSync: new Date().toISOString(),
+          syncError: null
+        });
+
+        console.log(`✅ Store: ${data.reservas.length} reservas cargadas`);
+        
+        // Actualizar días reservados después de cargar las reservas
+        const state = get();
+        state.actualizarDiasReservados();
+      } else {
+        throw new Error('No se recibieron datos válidos');
+      }
+
     } catch (error) {
-      console.error('Error cargando reservas:', error);
-      set({ 
+      console.error('❌ Store: Error cargando reservas:', error);
+      set({
+        isLoading: false,
         syncError: error.message,
-        isLoading: false
+        reservasHuespedes: [] // Fallback a array vacío
       });
     }
   },

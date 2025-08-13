@@ -86,10 +86,33 @@ export default function Reservas() {
     });
   };
 
-  // Cargar reservas al montar el componente
+  // Cargar reservas al montar el componente con logging mejorado
   useEffect(() => {
-    cargarReservas();
-  }, []);
+    const cargarReservasIniciales = async () => {
+      console.log('🔄 Iniciando carga inicial de reservas desde Zustand store...');
+      console.log('📊 Estado actual del store:', {
+        isLoading,
+        syncError,
+        totalReservas: reservasHuespedes?.length || 0
+      });
+
+      try {
+        // Usar la función del store que ya maneja loading y errores
+        await cargarReservas();
+        console.log(`✅ Reservas cargadas exitosamente: ${reservasHuespedes?.length || 0} registros`);
+
+      } catch (error) {
+        console.error('❌ Error en carga inicial de reservas:', error);
+        console.error('Detalles del error:', {
+          name: error.name,
+          message: error.message,
+          stack: error.stack?.slice(0, 300) // Solo primeras líneas del stack
+        });
+      }
+    };
+
+    cargarReservasIniciales();
+  }, [cargarReservas]); // Agregar cargarReservas como dependencia
 
   // Sincronización en tiempo real - Polling cada 30 segundos (5 segundos en desarrollo para testing)
   useEffect(() => {
