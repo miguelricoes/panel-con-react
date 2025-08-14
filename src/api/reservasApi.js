@@ -388,6 +388,65 @@ export const validarReserva = (reserva) => {
   };
 };
 
+// Función para consultar disponibilidades (para testing desde el panel)
+export const fetchDisponibilidades = async (fechaInicio, fechaFin, domo, personas) => {
+  try {
+    const params = new URLSearchParams();
+    if (fechaInicio) params.append('fecha_inicio', fechaInicio);
+    if (fechaFin) params.append('fecha_fin', fechaFin);
+    if (domo) params.append('domo', domo);
+    if (personas) params.append('personas', personas.toString());
+
+    const response = await fetch(`${API_BASE_URL}/api/disponibilidades?${params}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      mode: 'cors'
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log('📅 Disponibilidades recibidas:', data);
+
+    return data;
+  } catch (error) {
+    console.error('❌ Error consultando disponibilidades:', error);
+    throw error;
+  }
+};
+
+// Función para simular consulta del agente (para testing)
+export const consultarDisponibilidadesAgente = async (consulta) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/agente/disponibilidades`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      mode: 'cors',
+      body: JSON.stringify({ consulta })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error: ${response.status} ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log('🤖 Respuesta del agente:', data);
+
+    return data;
+  } catch (error) {
+    console.error('❌ Error en consulta del agente:', error);
+    throw error;
+  }
+};
+
 export default {
   fetchReservas,
   fetchReservasWithCache,
@@ -398,5 +457,7 @@ export default {
   fetchReservaById,
   syncReservas,
   checkApiHealth,
-  validarReserva
+  validarReserva,
+  fetchDisponibilidades,
+  consultarDisponibilidadesAgente
 };

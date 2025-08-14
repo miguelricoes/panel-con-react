@@ -1,6 +1,7 @@
 import { useStore } from "../store/useStore";
 import { useConfigStore } from "../store/configStore";
 import { useState } from "react";
+import { fetchDisponibilidades, consultarDisponibilidadesAgente } from '../api/reservasApi';
 
 export default function Calendario() {
   const diasReservados = useStore((state) => state.diasReservados);
@@ -10,6 +11,9 @@ export default function Calendario() {
   const [mesActual, setMesActual] = useState(new Date().getMonth());
   const [añoActual, setAñoActual] = useState(new Date().getFullYear());
   const [modalReserva, setModalReserva] = useState(null);
+  const [consultaAgente, setConsultaAgente] = useState('');
+  const [respuestaAgente, setRespuestaAgente] = useState(null);
+  const [cargandoConsulta, setCargandoConsulta] = useState(false);
 
   const meses = [
     "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -37,6 +41,24 @@ export default function Calendario() {
       } else {
         setMesActual(mesActual + 1);
       }
+    }
+  };
+
+  // Función para probar consulta del agente
+  const probarConsultaAgente = async () => {
+    if (!consultaAgente.trim()) return;
+
+    setCargandoConsulta(true);
+    try {
+      const respuesta = await consultarDisponibilidadesAgente(consultaAgente);
+      setRespuestaAgente(respuesta);
+    } catch (error) {
+      setRespuestaAgente({
+        respuesta_agente: 'Error en la consulta: ' + error.message,
+        tiene_disponibilidad: false
+      });
+    } finally {
+      setCargandoConsulta(false);
     }
   };
 
@@ -205,6 +227,71 @@ export default function Calendario() {
           <div className={`w-3 h-3 sm:w-4 sm:h-4 rounded ${tema === 'claro' ? 'bg-gray-50 border border-gray-200' : 'bg-gray-800 border border-gray-600'}`}></div>
           <span>Disponible</span>
         </div>
+      </div>
+
+      {/* Sección de prueba del agente */}
+      <div className={`mt-6 p-4 rounded-lg border ${
+        tema === 'claro' ? 'bg-blue-50 border-blue-200' : 'bg-blue-900/20 border-blue-800'
+      }`}>
+        <h3 className="text-lg font-bold mb-3">🤖 Prueba del Agente de Disponibilidades</h3>
+        <p className="text-sm mb-3 opacity-75">
+          Prueba cómo responde el agente a consultas de disponibilidad
+        </p>
+
+        <div className="flex flex-col gap-3">
+          <textarea
+            value={consultaAgente}
+            onChange={(e) => setConsultaAgente(e.target.value)}
+            placeholder="Ej: ¿Qué domos están disponibles para 2 personas la próxima semana?"
+            className={`w-full p-3 rounded border text-sm resize-none ${
+              tema === 'claro'
+                ? 'border-gray-300 bg-white text-gray-900'
+                : 'border-gray-600 bg-gray-700 text-white'
+            }`}
+            rows="2"
+          />
+
+          <button
+            onClick={probarConsultaAgente}
+            disabled={!consultaAgente.trim() || cargandoConsulta}
+            className={`px-4 py-2 rounded font-medium transition-colors ${
+              cargandoConsulta || !consultaAgente.trim()
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : tema === 'claro'
+                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  : 'bg-blue-700 text-white hover:bg-blue-600'
+            }`}
+          >
+            {cargandoConsulta ? '🔄 Consultando...' : '🚀 Consultar Disponibilidad'}
+          </button>
+        </div>
+
+        {respuestaAgente && (
+          <div className={`mt-4 p-3 rounded border ${
+            respuestaAgente.tiene_disponibilidad
+              ? (tema === 'claro' ? 'bg-green-50 border-green-200' : 'bg-green-900/20 border-green-800')
+              : (tema === 'claro' ? 'bg-red-50 border-red-200' : 'bg-red-900/20 border-red-800')
+          }`}>
+            <div className="flex items-start gap-2 mb-2">
+              <span className="text-lg">🤖</span>
+              <div className="flex-1">
+                <p className="font-medium text-sm">Respuesta del Agente:</p>
+                <div className="text-sm mt-1 whitespace-pre-wrap">
+                  {respuestaAgente.respuesta_agente}
+                </div>
+              </div>
+            </div>
+
+            {respuestaAgente.parametros_detectados && (
+              <details className="mt-3">
+                <summary className="text-xs cursor-pointer opacity-75">Ver detalles técnicos</summary>
+                <pre className="text-xs mt-2 p-2 bg-gray-100 dark:bg-gray-800 rounded overflow-auto">
+                  {JSON.stringify(respuestaAgente.parametros_detectados, null, 2)}
+                </pre>
+              </details>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Modal de reservas del día */}
