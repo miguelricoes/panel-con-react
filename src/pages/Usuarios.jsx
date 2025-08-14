@@ -446,7 +446,8 @@ const Usuarios = () => {
                     value={formData.rol}
                     onChange={(e) => setFormData({...formData, rol: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
-                  >
+
+>
                     <option value="limitado">Acceso Limitado</option>
                     <option value="completo">Acceso Completo</option>
                   </select>
