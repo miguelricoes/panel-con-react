@@ -246,72 +246,112 @@ export const useStore = create((set, get) => ({
   fetchUsuarios: async () => {
     set({ loadingUsuarios: true });
     try {
-      const response = await fetch(`${API_BASE_URL}/api/usuarios`);
+      const response = await fetch(`${API_BASE_URL}/api/usuarios`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        mode: 'cors'
+      });
 
       if (response.ok) {
-        const usuarios = await response.json();
+        const data = await response.json();
+        // Manejar tanto formato directo como formato con wrapper
+        const usuarios = Array.isArray(data) ? data : (data.usuarios || data.data || []);
         set({ usuarios, loadingUsuarios: false });
+        console.log(`✅ ${usuarios.length} usuarios cargados desde backend`);
       } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ Error HTTP cargando usuarios:', response.status, errorData);
         set({ loadingUsuarios: false });
       }
     } catch (error) {
-      console.error('Error cargando usuarios:', error);
+      console.error('❌ Error de conexión cargando usuarios:', error);
       set({ loadingUsuarios: false });
     }
   },
 
   createUsuario: async (userData) => {
     try {
+      console.log('🚀 Creando usuario:', userData);
       const response = await fetch(`${API_BASE_URL}/api/usuarios`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        mode: 'cors',
         body: JSON.stringify(userData)
       });
 
       if (response.ok) {
-        get().fetchUsuarios();
-        return { success: true };
+        const result = await response.json();
+        console.log('✅ Usuario creado exitosamente:', result);
+        get().fetchUsuarios(); // Recargar lista
+        return { success: true, data: result };
       }
-      const error = await response.json();
-      return { success: false, error: error.error || 'Error creando usuario' };
+      const errorData = await response.json().catch(() => ({}));
+      console.error('❌ Error creando usuario:', response.status, errorData);
+      return { success: false, error: errorData.error || errorData.message || 'Error creando usuario' };
     } catch (error) {
-      return { success: false, error: 'Error de conexión' };
+      console.error('❌ Error de conexión creando usuario:', error);
+      return { success: false, error: 'Error de conexión con el servidor' };
     }
   },
 
   updateUsuario: async (userId, userData) => {
     try {
+      console.log('🚀 Actualizando usuario:', userId, userData);
       const response = await fetch(`${API_BASE_URL}/api/usuarios/${userId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        mode: 'cors',
         body: JSON.stringify(userData)
       });
 
       if (response.ok) {
-        get().fetchUsuarios();
-        return { success: true };
+        const result = await response.json();
+        console.log('✅ Usuario actualizado exitosamente:', result);
+        get().fetchUsuarios(); // Recargar lista
+        return { success: true, data: result };
       }
-      const error = await response.json();
-      return { success: false, error: error.error || 'Error actualizando usuario' };
+      const errorData = await response.json().catch(() => ({}));
+      console.error('❌ Error actualizando usuario:', response.status, errorData);
+      return { success: false, error: errorData.error || errorData.message || 'Error actualizando usuario' };
     } catch (error) {
-      return { success: false, error: 'Error de conexión' };
+      console.error('❌ Error de conexión actualizando usuario:', error);
+      return { success: false, error: 'Error de conexión con el servidor' };
     }
   },
 
   deleteUsuario: async (userId) => {
     try {
+      console.log('🚀 Eliminando usuario:', userId);
       const response = await fetch(`${API_BASE_URL}/api/usuarios/${userId}`, {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        mode: 'cors'
       });
 
       if (response.ok) {
-        get().fetchUsuarios();
-        return { success: true };
+        const result = await response.json().catch(() => ({ message: 'Usuario eliminado' }));
+        console.log('✅ Usuario eliminado exitosamente:', result);
+        get().fetchUsuarios(); // Recargar lista
+        return { success: true, data: result };
       }
-      const error = await response.json();
-      return { success: false, error: error.error || 'Error eliminando usuario' };
+      const errorData = await response.json().catch(() => ({}));
+      console.error('❌ Error eliminando usuario:', response.status, errorData);
+      return { success: false, error: errorData.error || errorData.message || 'Error eliminando usuario' };
     } catch (error) {
-      return { success: false, error: 'Error de conexión' };
+      console.error('❌ Error de conexión eliminando usuario:', error);
+      return { success: false, error: 'Error de conexión con el servidor' };
     }
   },
 }));

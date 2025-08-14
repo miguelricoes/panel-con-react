@@ -67,7 +67,10 @@ export default function App() {
 
   if (!isLoggedIn) {
     console.log("Mostrando Login");
-    return <Login onLogin={() => setIsLoggedIn(true)} />;
+    return <Login onLogin={(user) => {
+      console.log("Usuario autenticado:", user);
+      setIsLoggedIn(true);
+    }} />;
   }
 
   console.log("Usuario loggeado, mostrando interfaz con tema:", tema, "página:", paginaActual);

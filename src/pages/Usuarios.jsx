@@ -37,7 +37,7 @@ const Usuarios = () => {
 
   useEffect(() => {
     fetchUsuarios();
-  }, [fetchUsuarios]);
+  }, []); // Ejecutar solo una vez al montar el componente
 
   const resetForm = () => {
     setFormData({ nombre: '', email: '', password: '', rol: 'limitado' });
@@ -99,18 +99,27 @@ const Usuarios = () => {
   };
 
   const handleDelete = async (userId, userEmail) => {
-    if (userEmail === 'juan@example.com') {
-      alert('No se puede eliminar el usuario administrador principal');
+    // Protección para usuarios administradores principales
+    const adminEmails = ['juan@example.com', 'admin@glamping.com'];
+    if (adminEmails.includes(userEmail?.toLowerCase())) {
+      setError('No se puede eliminar el usuario administrador principal');
+      setTimeout(() => setError(''), 3000);
       return;
     }
 
     if (confirm('¿Estás seguro de eliminar este usuario?')) {
-      const result = await deleteUsuario(userId);
-      if (result.success) {
-        setSuccess('Usuario eliminado exitosamente');
-        setTimeout(() => setSuccess(''), 3000);
-      } else {
-        setError(result.error);
+      try {
+        const result = await deleteUsuario(userId);
+        if (result.success) {
+          setSuccess('Usuario eliminado exitosamente');
+          setTimeout(() => setSuccess(''), 3000);
+        } else {
+          setError(result.error || 'Error eliminando usuario');
+          setTimeout(() => setError(''), 3000);
+        }
+      } catch (error) {
+        console.error('Error eliminando usuario:', error);
+        setError('Error de conexión eliminando usuario');
         setTimeout(() => setError(''), 3000);
       }
     }
@@ -257,7 +266,7 @@ font-medium ${
                         onClick={() => handleDelete(usuario.id, usuario.email)}
                         className="text-red-600 hover:text-red-900 p-1"
                         title="Eliminar usuario"
-                        disabled={usuario.email === 'juan@example.com'}
+                        disabled={['juan@example.com', 'admin@glamping.com'].includes(usuario.email?.toLowerCase())}
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
