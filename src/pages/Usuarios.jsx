@@ -1,166 +1,394 @@
-// src/pages/Usuarios.jsx
-import React, { useState } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useStore } from '../store/useStore';
+import {
+  Plus,
+  Edit2,
+  Trash2,
+  User,
+  Mail,
+  Calendar,
+  Shield,
+  ShieldCheck,
+  Eye,
+  EyeOff
+} from 'lucide-react';
 
-export default function Usuarios() {
-  const [usuarios, setUsuarios] = useState([
-    { id: 1, nombre: 'Juan Pérez', correo: 'juan@example.com', contrasena: 'admin123', rol: 'Administrador' },
-  ]);
-  const [form, setForm] = useState({ nombre: '', correo: '', contrasena: '', rol: 'Usuario' });
-  const [mostrarClaveFormulario, setMostrarClaveFormulario] = useState(false);
-  const [visibilidad, setVisibilidad] = useState({});
+const Usuarios = () => {
+  const {
+    usuarios,
+    loadingUsuarios,
+    fetchUsuarios,
+    createUsuario,
+    updateUsuario,
+    deleteUsuario
+  } = useStore();
 
-  const registrarUsuario = () => {
-    if (!form.nombre || !form.correo || !form.contrasena || !form.rol) return;
+  const [showModal, setShowModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [formData, setFormData] = useState({
+    nombre: '',
+    email: '',
+    password: '',
+    rol: 'limitado'
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-    const nuevoId = usuarios.length > 0 ? Math.max(...usuarios.map(u => u.id)) + 1 : 1;
+  useEffect(() => {
+    fetchUsuarios();
+  }, [fetchUsuarios]);
 
-    const nuevoUsuario = {
-      ...form,
-      id: nuevoId,
-    };
-
-    setUsuarios([...usuarios, nuevoUsuario]);
-    setForm({ nombre: '', correo: '', contrasena: '', rol: 'Usuario' });
+  const resetForm = () => {
+    setFormData({ nombre: '', email: '', password: '', rol: 'limitado' });
+    setEditingUser(null);
+    setShowPassword(false);
+    setError('');
+    setSuccess('');
   };
 
-  const toggleContrasena = (id) => {
-    setVisibilidad((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    if (!formData.nombre || !formData.email) {
+      setError('Nombre y email son requeridos');
+      return;
+    }
+
+    if (!editingUser && !formData.password) {
+      setError('Contraseña es requerida para usuarios nuevos');
+      return;
+    }
+
+    let result;
+    if (editingUser) {
+      result = await updateUsuario(editingUser.id, {
+        nombre: formData.nombre,
+        email: formData.email,
+        rol: formData.rol,
+        activo: true
+      });
+    } else {
+      result = await createUsuario(formData);
+    }
+
+    if (result.success) {
+      setSuccess(editingUser ? 'Usuario actualizado exitosamente' : 'Usuario creado exitosamente');
+      setTimeout(() => {
+        setShowModal(false);
+        resetForm();
+      }, 1000);
+    } else {
+      setError(result.error);
+    }
   };
+
+  const handleEdit = (usuario) => {
+    setEditingUser(usuario);
+    setFormData({
+      nombre: usuario.nombre,
+      email: usuario.email,
+      password: '',
+      rol: usuario.rol
+    });
+    setError('');
+    setSuccess('');
+    setShowModal(true);
+  };
+
+  const handleDelete = async (userId, userEmail) => {
+    if (userEmail === 'juan@example.com') {
+      alert('No se puede eliminar el usuario administrador principal');
+      return;
+    }
+
+    if (confirm('¿Estás seguro de eliminar este usuario?')) {
+      const result = await deleteUsuario(userId);
+      if (result.success) {
+        setSuccess('Usuario eliminado exitosamente');
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError(result.error);
+        setTimeout(() => setError(''), 3000);
+      }
+    }
+  };
+
+  const openCreateModal = () => {
+    resetForm();
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    resetForm();
+  };
+
+  if (loadingUsuarios) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-gray-900 min-h-screen text-white">
-      <h2 className="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">Usuarios Registrados</h2>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Gestión de Usuarios</h1>
+          <p className="text-gray-600 mt-2">Administra los usuarios del panel de control</p>
+        </div>
+        <button
+          onClick={openCreateModal}
+          className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2"
+        >
+          <Plus className="h-5 w-5" />
+          Nuevo Usuario
+        </button>
+      </div>
 
-      {/* Vista de tabla para desktop */}
-      <div className="hidden lg:block overflow-x-auto mb-10">
-        <table className="w-full border border-gray-700">
-          <thead>
-            <tr className="bg-gray-800">
-              <th className="px-4 py-2 border">ID</th>
-              <th className="px-4 py-2 border">Nombre</th>
-              <th className="px-4 py-2 border">Correo</th>
-              <th className="px-4 py-2 border">Rol</th>
-              <th className="px-4 py-2 border">Contraseña</th>
+      {/* Mensajes de éxito/error globales */}
+      {(success || error) && (
+        <div className={`p-4 rounded-lg ${success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+          {success || error}
+        </div>
+      )}
+
+      {/* Tabla de usuarios */}
+      <div className="bg-white shadow-sm rounded-lg overflow-hidden">
+        <table className="w-full">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Usuario
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Tipo de Acceso
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Fecha Creación
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Último Acceso
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Estado
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Acciones
+              </th>
             </tr>
           </thead>
-          <tbody>
-            {usuarios.map((u) => (
-              <tr key={u.id} className="text-center">
-                <td className="border px-4 py-2">{u.id}</td>
-                <td className="border px-4 py-2">{u.nombre}</td>
-                <td className="border px-4 py-2">{u.correo}</td>
-                <td className="border px-4 py-2">{u.rol}</td>
-                <td className="border px-4 py-2">
-                  <div className="flex items-center justify-center gap-2">
-                    <span>{visibilidad[u.id] ? u.contrasena : '••••••'}</span>
-                    <button
-                      type="button"
-                      onClick={() => toggleContrasena(u.id)}
-                      className="text-gray-400"
-                    >
-                      {visibilidad[u.id] ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {usuarios.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                  No hay usuarios registrados
                 </td>
               </tr>
-            ))}
+            ) : (
+              usuarios.map((usuario) => (
+                <tr key={usuario.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 h-10 w-10">
+                        <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
+                          <User className="h-6 w-6 text-green-600" />
+                        </div>
+                      </div>
+                      <div className="ml-4">
+                        <div className="text-sm font-medium text-gray-900">{usuario.nombre}</div>
+                        <div className="text-sm text-gray-500 flex items-center gap-1">
+                          <Mail className="h-4 w-4" />
+                          {usuario.email}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs
+font-medium ${
+                      usuario.rol === 'completo'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
+                      {usuario.rol === 'completo' ? (
+                        <ShieldCheck className="h-3 w-3" />
+                      ) : (
+                        <Shield className="h-3 w-3" />
+                      )}
+                      {usuario.rol === 'completo' ? 'Acceso Completo' : 'Acceso Limitado'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <div className="flex items-center gap-1">
+                      <Calendar className="h-4 w-4" />
+                      {usuario.fecha_creacion ? new Date(usuario.fecha_creacion).toLocaleDateString() : 'N/A'}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {usuario.ultimo_acceso ? (
+                      new Date(usuario.ultimo_acceso).toLocaleString()
+                    ) : (
+                      'Nunca'
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                      usuario.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
+                      {usuario.activo ? 'Activo' : 'Inactivo'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleEdit(usuario)}
+                        className="text-blue-600 hover:text-blue-900 p-1"
+                        title="Editar usuario"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(usuario.id, usuario.email)}
+                        className="text-red-600 hover:text-red-900 p-1"
+                        title="Eliminar usuario"
+                        disabled={usuario.email === 'juan@example.com'}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
 
-      {/* Vista de cards para móvil */}
-      <div className="lg:hidden mb-10 space-y-4">
-        {usuarios.map((u) => (
-          <div key={u.id} className="bg-gray-800 rounded-lg p-4 border border-gray-700">
-            <div className="flex justify-between items-start mb-3">
-              <div>
-                <h3 className="font-medium text-lg">{u.nombre}</h3>
-                <p className="text-sm text-gray-400">ID: {u.id}</p>
-              </div>
-              <span className="px-2 py-1 bg-blue-600 text-white rounded text-xs">
-                {u.rol}
-              </span>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm"><span className="text-gray-400">Email:</span> {u.correo}</p>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-400">Contraseña:</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">{visibilidad[u.id] ? u.contrasena : '••••••'}</span>
+      {/* Modal de creación/edición */}
+      {showModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                {editingUser ? 'Editar Usuario' : 'Crear Nuevo Usuario'}
+              </h3>
+
+              {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+                  {error}
+                </div>
+              )}
+
+              {success && (
+                <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
+                  {success}
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nombre *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.nombre}
+                    onChange={(e) => setFormData({...formData, nombre: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500
+focus:border-green-500"
+                    required
+                    placeholder="Nombre completo del usuario"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Email *
+                  </label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500
+focus:border-green-500"
+                    required
+                    placeholder="correo@example.com"
+                  />
+                </div>
+
+                {!editingUser && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Contraseña *
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={formData.password}
+                        onChange={(e) => setFormData({...formData, password: e.target.value})}
+                        className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:ring-green-500
+focus:border-green-500"
+                        required
+                        placeholder="Contraseña segura"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tipo de Acceso
+                  </label>
+                  <select
+                    value={formData.rol}
+                    onChange={(e) => setFormData({...formData, rol: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500
+focus:border-green-500"
+                  >
+                    <option value="limitado">Acceso Limitado</option>
+                    <option value="completo">Acceso Completo</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    <strong>Limitado:</strong> Solo Dashboard y Reservas<br />
+                    <strong>Completo:</strong> Acceso a todo el panel
+                  </p>
+                </div>
+
+                <div className="flex justify-end gap-3 mt-6">
                   <button
                     type="button"
-                    onClick={() => toggleContrasena(u.id)}
-                    className="text-gray-400 hover:text-white"
+                    onClick={closeModal}
+                    className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
                   >
-                    {visibilidad[u.id] ? <EyeOff size={16} /> : <Eye size={16} />}
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  >
+                    {editingUser ? 'Actualizar' : 'Crear Usuario'}
                   </button>
                 </div>
-              </div>
+              </form>
             </div>
           </div>
-        ))}
-      </div>
-
-      <h3 className="text-lg sm:text-xl font-medium mb-4">Registrar Usuario</h3>
-
-      <div className="space-y-4 max-w-full sm:max-w-lg">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <input
-            type="text"
-            placeholder="Nombre"
-            value={form.nombre}
-            onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-            className="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded text-sm sm:text-base"
-          />
-          <input
-            type="email"
-            placeholder="Correo"
-            value={form.correo}
-            onChange={(e) => setForm({ ...form, correo: e.target.value })}
-            className="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded text-sm sm:text-base"
-          />
         </div>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="relative">
-            <input
-              type={mostrarClaveFormulario ? 'text' : 'password'}
-              placeholder="Contraseña"
-              value={form.contrasena}
-              onChange={(e) => setForm({ ...form, contrasena: e.target.value })}
-              className="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded pr-10 text-sm sm:text-base"
-            />
-            <button
-              type="button"
-              onClick={() => setMostrarClaveFormulario(!mostrarClaveFormulario)}
-              className="absolute inset-y-0 right-3 flex items-center text-gray-400"
-            >
-              {mostrarClaveFormulario ? <EyeOff size={18} /> : <Eye size={18} />}
-            </button>
-          </div>
-          
-          <select
-            value={form.rol}
-            onChange={(e) => setForm({ ...form, rol: e.target.value })}
-            className="w-full px-4 py-2 bg-gray-800 border border-gray-600 rounded text-sm sm:text-base"
-          >
-            <option value="Usuario">Usuario</option>
-            <option value="Moderador">Moderador</option>
-            <option value="Administrador">Administrador</option>
-          </select>
-        </div>
-
-        <button
-          onClick={registrarUsuario}
-          className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded text-sm sm:text-base"
-        >
-          Registrar Usuario
-        </button>
-      </div>
+      )}
     </div>
   );
-}
+};
+
+export default Usuarios;

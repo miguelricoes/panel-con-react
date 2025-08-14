@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { fetchReservas, syncReservas } from '../api/reservasApi';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://agente-glamping-production.up.railway.app';
+
 export const useStore = create((set, get) => ({
   notificaciones: [
     {
@@ -27,22 +29,9 @@ export const useStore = create((set, get) => ({
 
   paginaActual: 'inicio',
 
-  usuarios: [
-    {
-      id: 1,
-      nombre: "Juan Pérez",
-      correo: "juan@example.com",
-      rol: "Administrador",
-      contrasena: "admin123"
-    },
-    {
-      id: 2,
-      nombre: "Invitado",
-      correo: "user@example.com",
-      contrasena: "user123",
-      rol: "Invitado",
-    },
-  ],
+  // === ESTADO DE USUARIOS ===
+  usuarios: [],
+  loadingUsuarios: false,
   
 
   // diasReservados se calcula como función para evitar problemas con 'this'
@@ -251,5 +240,78 @@ export const useStore = create((set, get) => ({
   forzarSincronizacion: async () => {
     const state = get();
     await state.cargarReservas();
+  },
+
+  // === ACCIONES DE USUARIOS ===
+  fetchUsuarios: async () => {
+    set({ loadingUsuarios: true });
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/usuarios`);
+
+      if (response.ok) {
+        const usuarios = await response.json();
+        set({ usuarios, loadingUsuarios: false });
+      } else {
+        set({ loadingUsuarios: false });
+      }
+    } catch (error) {
+      console.error('Error cargando usuarios:', error);
+      set({ loadingUsuarios: false });
+    }
+  },
+
+  createUsuario: async (userData) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/usuarios`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData)
+      });
+
+      if (response.ok) {
+        get().fetchUsuarios();
+        return { success: true };
+      }
+      const error = await response.json();
+      return { success: false, error: error.error || 'Error creando usuario' };
+    } catch (error) {
+      return { success: false, error: 'Error de conexión' };
+    }
+  },
+
+  updateUsuario: async (userId, userData) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/usuarios/${userId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData)
+      });
+
+      if (response.ok) {
+        get().fetchUsuarios();
+        return { success: true };
+      }
+      const error = await response.json();
+      return { success: false, error: error.error || 'Error actualizando usuario' };
+    } catch (error) {
+      return { success: false, error: 'Error de conexión' };
+    }
+  },
+
+  deleteUsuario: async (userId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/usuarios/${userId}`, {
+        method: 'DELETE'
+      });
+
+      if (response.ok) {
+        get().fetchUsuarios();
+        return { success: true };
+      }
+      const error = await response.json();
+      return { success: false, error: error.error || 'Error eliminando usuario' };
+    } catch (error) {
+      return { success: false, error: 'Error de conexión' };
+    }
   },
 }));
