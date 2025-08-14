@@ -15,6 +15,7 @@ const PQRS = lazy(() => import("./pages/PQRS"));
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
   const [error, setError] = useState(null);
 
   console.log("App renderizado, isLoggedIn:", isLoggedIn);
@@ -69,18 +70,31 @@ export default function App() {
     console.log("Mostrando Login");
     return <Login onLogin={(user) => {
       console.log("Usuario autenticado:", user);
+      setCurrentUser(user);
       setIsLoggedIn(true);
     }} />;
   }
 
   console.log("Usuario loggeado, mostrando interfaz con tema:", tema, "página:", paginaActual);
   
+  // Páginas disponibles según el rol
+  const userRole = currentUser?.rol || 'limitado';
+  const paginasLimitadas = ['inicio', 'calendario', 'reservas'];
+  const paginasCompletas = ['inicio', 'usuarios', 'calendario', 'reservas', 'pqrs'];
+  
+  const paginasPermitidas = userRole === 'completo' ? paginasCompletas : paginasLimitadas;
+  
+  // Si el usuario limitado intenta acceder a página restringida, redirigir
+  if (!paginasPermitidas.includes(paginaActual)) {
+    setPaginaActual('inicio');
+  }
+
   const paginas = {
-    usuarios: <Usuarios />,
-    pqrs: <PQRS />,
+    usuarios: userRole === 'completo' ? <Usuarios /> : null,
+    pqrs: userRole === 'completo' ? <PQRS /> : null,
     calendario: <Calendario />,
     reservas: <Reservas />,
-    inicio: <Inicio />,
+    inicio: <Inicio userRole={userRole} />,
   };
 
   // Componente de carga
@@ -94,10 +108,14 @@ export default function App() {
   return (
     <div className={`flex h-screen ${tema === 'claro' ? 'bg-gray-100' : 'bg-gray-950'}`}>
       <TestPanel />
-      <Sidebar />
+      <Sidebar 
+        userRole={currentUser?.rol || 'limitado'} 
+        userName={currentUser?.nombre || 'Usuario'} 
+      />
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header onLogout={() => {
           console.log("Cerrando sesión desde Header componente");
+          setCurrentUser(null);
           setIsLoggedIn(false);
         }} />
         <main className="flex-1 overflow-y-auto p-3 sm:p-6">

@@ -243,10 +243,14 @@ export const useStore = create((set, get) => ({
   },
 
   // === ACCIONES DE USUARIOS ===
-  fetchUsuarios: async () => {
+  fetchUsuarios: async (includePasswords = false) => {
     set({ loadingUsuarios: true });
     try {
-      const response = await fetch(`${API_BASE_URL}/api/usuarios`, {
+      const url = includePasswords
+        ? `${API_BASE_URL}/api/usuarios?include_passwords=true`
+        : `${API_BASE_URL}/api/usuarios`;
+
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -257,8 +261,8 @@ export const useStore = create((set, get) => ({
 
       if (response.ok) {
         const data = await response.json();
-        // Manejar tanto formato directo como formato con wrapper
-        const usuarios = Array.isArray(data) ? data : (data.usuarios || data.data || []);
+        const allUsers = Array.isArray(data) ? data : (data.usuarios || data.data || []);
+        const usuarios = allUsers.filter(user => user.activo === true);
         set({ usuarios, loadingUsuarios: false });
         console.log(`✅ ${usuarios.length} usuarios cargados desde backend`);
       } else {
@@ -352,6 +356,33 @@ export const useStore = create((set, get) => ({
     } catch (error) {
       console.error('❌ Error de conexión eliminando usuario:', error);
       return { success: false, error: 'Error de conexión con el servidor' };
+    }
+  },
+
+  regeneratePassword: async (userId) => {
+    try {
+      console.log('🚀 Regenerando contraseña para usuario:', userId);
+      const response = await fetch(`${API_BASE_URL}/api/usuarios/${userId}/regenerate-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        mode: 'cors'
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Contraseña regenerada:', result);
+        // Recargar usuarios con contraseñas
+        get().fetchUsuarios(true);
+        return { success: true, password: result.temp_password };
+      }
+      const errorData = await response.json().catch(() => ({}));
+      return { success: false, error: errorData.error || 'Error regenerando contraseña' };
+    } catch (error) {
+      console.error('❌ Error regenerando contraseña:', error);
+      return { success: false, error: 'Error de conexión' };
     }
   },
 }));

@@ -3,7 +3,7 @@ import { useStore } from "../store/useStore";
 import { useConfigStore } from "../store/configStore";
 import { Calendar, Users, FileText, AlertTriangle, TrendingUp, MapPin } from "lucide-react";
 
-export default function Inicio() {
+export default function Inicio({ userRole = 'limitado' }) {
   const reservasHuespedes = useStore((state) => state.reservasHuespedes);
   const pqrsPendientes = useStore((state) => state.pqrsPendientes);
   const diasReservados = useStore((state) => state.diasReservados);
@@ -43,14 +43,20 @@ export default function Inicio() {
   return (
     <div className={`w-full ${tema === 'claro' ? 'text-gray-900' : 'text-white'}`}>
       <div className="mb-6">
-        <h2 className="text-2xl sm:text-3xl font-bold mb-2">Panel de Administración</h2>
+        <h2 className="text-2xl sm:text-3xl font-bold mb-2">
+          {userRole === 'completo' ? 'Panel de Administración' : 'Dashboard de Empleado'}
+        </h2>
         <p className={`text-sm sm:text-base ${tema === 'claro' ? 'text-gray-600' : 'text-gray-400'}`}>
-          Resumen general del glamping
+          {userRole === 'completo' ? 'Resumen general del glamping' : 'Información básica del día'}
         </p>
       </div>
 
       {/* Estadísticas principales */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+      <div className={`grid gap-4 sm:gap-6 mb-8 ${
+        userRole === 'completo' 
+          ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4' 
+          : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+      }`}>
         {/* Total Reservas */}
         <div className={`rounded-lg p-4 sm:p-6 shadow-lg ${
           tema === 'claro' ? 'bg-white border border-gray-200' : 'bg-gray-800'
@@ -91,47 +97,73 @@ export default function Inicio() {
           </p>
         </div>
 
-        {/* PQRS Pendientes */}
-        <div className={`rounded-lg p-4 sm:p-6 shadow-lg ${
-          tema === 'claro' ? 'bg-white border border-gray-200' : 'bg-gray-800'
-        }`}>
-          <div className="flex items-center justify-between mb-3">
-            <div className={`p-2 sm:p-3 rounded-full ${
-              tema === 'claro' ? 'bg-yellow-100' : 'bg-yellow-900/30'
-            }`}>
-              <FileText className={`w-5 h-5 sm:w-6 sm:h-6 ${
-                tema === 'claro' ? 'text-yellow-600' : 'text-yellow-400'
-              }`} />
+        {/* PQRS Pendientes - Solo para administradores */}
+        {userRole === 'completo' && (
+          <div className={`rounded-lg p-4 sm:p-6 shadow-lg ${
+            tema === 'claro' ? 'bg-white border border-gray-200' : 'bg-gray-800'
+          }`}>
+            <div className="flex items-center justify-between mb-3">
+              <div className={`p-2 sm:p-3 rounded-full ${
+                tema === 'claro' ? 'bg-yellow-100' : 'bg-yellow-900/30'
+              }`}>
+                <FileText className={`w-5 h-5 sm:w-6 sm:h-6 ${
+                  tema === 'claro' ? 'text-yellow-600' : 'text-yellow-400'
+                }`} />
+              </div>
+              <span className="text-2xl sm:text-3xl font-bold">{pqrsPorEstado.pendiente}</span>
             </div>
-            <span className="text-2xl sm:text-3xl font-bold">{pqrsPorEstado.pendiente}</span>
+            <h3 className="font-semibold text-sm sm:text-base">PQRS Pendientes</h3>
+            <p className={`text-xs sm:text-sm ${tema === 'claro' ? 'text-gray-600' : 'text-gray-400'}`}>
+              Requieren atención
+            </p>
           </div>
-          <h3 className="font-semibold text-sm sm:text-base">PQRS Pendientes</h3>
-          <p className={`text-xs sm:text-sm ${tema === 'claro' ? 'text-gray-600' : 'text-gray-400'}`}>
-            Requieren atención
-          </p>
-        </div>
+        )}
 
-        {/* Ingresos Totales */}
-        <div className={`rounded-lg p-4 sm:p-6 shadow-lg ${
-          tema === 'claro' ? 'bg-white border border-gray-200' : 'bg-gray-800'
-        }`}>
-          <div className="flex items-center justify-between mb-3">
-            <div className={`p-2 sm:p-3 rounded-full ${
-              tema === 'claro' ? 'bg-purple-100' : 'bg-purple-900/30'
-            }`}>
-              <TrendingUp className={`w-5 h-5 sm:w-6 sm:h-6 ${
-                tema === 'claro' ? 'text-purple-600' : 'text-purple-400'
-              }`} />
+        {/* Próximas Llegadas - Para empleados */}
+        {userRole === 'limitado' && (
+          <div className={`rounded-lg p-4 sm:p-6 shadow-lg ${
+            tema === 'claro' ? 'bg-white border border-gray-200' : 'bg-gray-800'
+          }`}>
+            <div className="flex items-center justify-between mb-3">
+              <div className={`p-2 sm:p-3 rounded-full ${
+                tema === 'claro' ? 'bg-blue-100' : 'bg-blue-900/30'
+              }`}>
+                <MapPin className={`w-5 h-5 sm:w-6 sm:h-6 ${
+                  tema === 'claro' ? 'text-blue-600' : 'text-blue-400'
+                }`} />
+              </div>
+              <span className="text-2xl sm:text-3xl font-bold">{reservasProximas}</span>
             </div>
-            <span className="text-lg sm:text-xl font-bold">
-              ${(ingresosTotales / 1000000).toFixed(1)}M
-            </span>
+            <h3 className="font-semibold text-sm sm:text-base">Próximas Llegadas</h3>
+            <p className={`text-xs sm:text-sm ${tema === 'claro' ? 'text-gray-600' : 'text-gray-400'}`}>
+              Esta semana
+            </p>
           </div>
-          <h3 className="font-semibold text-sm sm:text-base">Ingresos Totales</h3>
-          <p className={`text-xs sm:text-sm ${tema === 'claro' ? 'text-gray-600' : 'text-gray-400'}`}>
-            ${ingresosTotales.toLocaleString()} COP
-          </p>
-        </div>
+        )}
+
+        {/* Ingresos Totales - Solo para administradores */}
+        {userRole === 'completo' && (
+          <div className={`rounded-lg p-4 sm:p-6 shadow-lg ${
+            tema === 'claro' ? 'bg-white border border-gray-200' : 'bg-gray-800'
+          }`}>
+            <div className="flex items-center justify-between mb-3">
+              <div className={`p-2 sm:p-3 rounded-full ${
+                tema === 'claro' ? 'bg-purple-100' : 'bg-purple-900/30'
+              }`}>
+                <TrendingUp className={`w-5 h-5 sm:w-6 sm:h-6 ${
+                  tema === 'claro' ? 'text-purple-600' : 'text-purple-400'
+                }`} />
+              </div>
+              <span className="text-lg sm:text-xl font-bold">
+                ${(ingresosTotales / 1000000).toFixed(1)}M
+              </span>
+            </div>
+            <h3 className="font-semibold text-sm sm:text-base">Ingresos Totales</h3>
+            <p className={`text-xs sm:text-sm ${tema === 'claro' ? 'text-gray-600' : 'text-gray-400'}`}>
+              ${ingresosTotales.toLocaleString()} COP
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Dashboard secundario */}

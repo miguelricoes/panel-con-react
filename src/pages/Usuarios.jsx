@@ -10,7 +10,8 @@ import {
   Shield,
   ShieldCheck,
   Eye,
-  EyeOff
+  EyeOff,
+  RefreshCw
 } from 'lucide-react';
 
 const Usuarios = () => {
@@ -20,7 +21,8 @@ const Usuarios = () => {
     fetchUsuarios,
     createUsuario,
     updateUsuario,
-    deleteUsuario
+    deleteUsuario,
+    regeneratePassword
   } = useStore();
 
   const [showModal, setShowModal] = useState(false);
@@ -34,10 +36,14 @@ const Usuarios = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [deletingUserId, setDeletingUserId] = useState(null);
+  const [showPasswords, setShowPasswords] = useState(true);
+  const [regeneratingPassword, setRegeneratingPassword] = useState(null);
 
   useEffect(() => {
-    fetchUsuarios();
-  }, []); // Ejecutar solo una vez al montar el componente
+    // Cargar usuarios con contraseñas para admin
+    fetchUsuarios(true);
+  }, [fetchUsuarios]);
 
   const resetForm = () => {
     setFormData({ nombre: '', email: '', password: '', rol: 'limitado' });
@@ -57,11 +63,6 @@ const Usuarios = () => {
       return;
     }
 
-    if (!editingUser && !formData.password) {
-      setError('Contraseña es requerida para usuarios nuevos');
-      return;
-    }
-
     let result;
     if (editingUser) {
       result = await updateUsuario(editingUser.id, {
@@ -71,15 +72,26 @@ const Usuarios = () => {
         activo: true
       });
     } else {
-      result = await createUsuario(formData);
+      result = await createUsuario({
+        nombre: formData.nombre,
+        email: formData.email,
+        password: formData.password || undefined, // Opcional
+        rol: formData.rol
+      });
     }
 
     if (result.success) {
-      setSuccess(editingUser ? 'Usuario actualizado exitosamente' : 'Usuario creado exitosamente');
+      const message = editingUser ? 'Usuario actualizado exitosamente' :
+        `Usuario creado exitosamente${result.data?.temp_password ? '. Contraseña: ' + result.data.temp_password : ''}`;
+      setSuccess(message);
+
+      // Recargar usuarios con contraseñas
+      await fetchUsuarios(true);
+
       setTimeout(() => {
         setShowModal(false);
         resetForm();
-      }, 1000);
+      }, 3000);
     } else {
       setError(result.error);
     }
@@ -99,28 +111,55 @@ const Usuarios = () => {
   };
 
   const handleDelete = async (userId, userEmail) => {
-    // Protección para usuarios administradores principales
-    const adminEmails = ['juan@example.com', 'admin@glamping.com'];
-    if (adminEmails.includes(userEmail?.toLowerCase())) {
+    if (userEmail?.toLowerCase() === 'juan@example.com') {
       setError('No se puede eliminar el usuario administrador principal');
       setTimeout(() => setError(''), 3000);
       return;
     }
 
-    if (confirm('¿Estás seguro de eliminar este usuario?')) {
+    if (confirm('¿Estás seguro de eliminar este usuario?\n\nEsta acción no se puede deshacer.')) {
+      setDeletingUserId(userId);
+
       try {
+        setError('');
+        setSuccess('');
+
         const result = await deleteUsuario(userId);
         if (result.success) {
           setSuccess('Usuario eliminado exitosamente');
           setTimeout(() => setSuccess(''), 3000);
+          await fetchUsuarios(true);
         } else {
           setError(result.error || 'Error eliminando usuario');
-          setTimeout(() => setError(''), 3000);
+          setTimeout(() => setError(''), 5000);
         }
       } catch (error) {
         console.error('Error eliminando usuario:', error);
         setError('Error de conexión eliminando usuario');
-        setTimeout(() => setError(''), 3000);
+        setTimeout(() => setError(''), 5000);
+      } finally {
+        setDeletingUserId(null);
+      }
+    }
+  };
+
+  const handleRegeneratePassword = async (userId, userName) => {
+    if (confirm(`¿Regenerar contraseña para ${userName}?\n\nEsto creará una nueva contraseña temporal.`)) {
+      setRegeneratingPassword(userId);
+      try {
+        const result = await regeneratePassword(userId);
+        if (result.success) {
+          setSuccess(`Nueva contraseña generada para ${userName}: ${result.password}`);
+          setTimeout(() => setSuccess(''), 10000); // 10 segundos
+        } else {
+          setError(result.error);
+          setTimeout(() => setError(''), 5000);
+        }
+      } catch (error) {
+        setError('Error regenerando contraseña');
+        setTimeout(() => setError(''), 5000);
+      } finally {
+        setRegeneratingPassword(null);
       }
     }
   };
@@ -176,6 +215,18 @@ const Usuarios = () => {
                 Usuario
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <div className="flex items-center gap-2">
+                  Contraseña Temporal
+                  <button
+                    onClick={() => setShowPasswords(!showPasswords)}
+                    className="text-blue-600 hover:text-blue-900"
+                    title={showPasswords ? "Ocultar contraseñas" : "Mostrar contraseñas"}
+                  >
+                    {showPasswords ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Tipo de Acceso
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -195,7 +246,7 @@ const Usuarios = () => {
           <tbody className="bg-white divide-y divide-gray-200">
             {usuarios.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
                   No hay usuarios registrados
                 </td>
               </tr>
@@ -219,8 +270,35 @@ const Usuarios = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs
-font-medium ${
+                    <div className="flex items-center gap-2">
+                      {showPasswords && usuario.temp_password ? (
+                        <div className="flex items-center gap-2">
+                          <code className="bg-gray-100 px-2 py-1 rounded text-sm font-mono">
+                            {usuario.temp_password}
+                          </code>
+                          <button
+                            onClick={() => handleRegeneratePassword(usuario.id, usuario.nombre)}
+                            disabled={regeneratingPassword === usuario.id}
+                            className="text-blue-600 hover:text-blue-900 text-xs flex items-center gap-1"
+                            title="Regenerar contraseña"
+                          >
+                            {regeneratingPassword === usuario.id ? (
+                              <div className="animate-spin h-3 w-3 border border-blue-600 border-t-transparent rounded-full" />
+                            ) : (
+                              <RefreshCw className="h-3 w-3" />
+                            )}
+                            Regenerar
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-sm">
+                          {showPasswords ? "Sin contraseña temporal" : "••••••••"}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
                       usuario.rol === 'completo'
                         ? 'bg-blue-100 text-blue-800'
                         : 'bg-gray-100 text-gray-800'
@@ -264,11 +342,15 @@ font-medium ${
                       </button>
                       <button
                         onClick={() => handleDelete(usuario.id, usuario.email)}
-                        className="text-red-600 hover:text-red-900 p-1"
+                        className="text-red-600 hover:text-red-900 p-1 disabled:opacity-50"
                         title="Eliminar usuario"
-                        disabled={['juan@example.com', 'admin@glamping.com'].includes(usuario.email?.toLowerCase())}
+                        disabled={usuario.email === 'juan@example.com' || deletingUserId === usuario.id}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        {deletingUserId === usuario.id ? (
+                          <div className="animate-spin h-4 w-4 border-2 border-red-600 border-t-transparent rounded-full" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
                       </button>
                     </div>
                   </td>
@@ -309,8 +391,7 @@ font-medium ${
                     type="text"
                     value={formData.nombre}
                     onChange={(e) => setFormData({...formData, nombre: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500
-focus:border-green-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
                     required
                     placeholder="Nombre completo del usuario"
                   />
@@ -324,8 +405,7 @@ focus:border-green-500"
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500
-focus:border-green-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
                     required
                     placeholder="correo@example.com"
                   />
@@ -334,17 +414,15 @@ focus:border-green-500"
                 {!editingUser && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Contraseña *
+                      Contraseña (opcional)
                     </label>
                     <div className="relative">
                       <input
                         type={showPassword ? "text" : "password"}
                         value={formData.password}
                         onChange={(e) => setFormData({...formData, password: e.target.value})}
-                        className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:ring-green-500
-focus:border-green-500"
-                        required
-                        placeholder="Contraseña segura"
+                        className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                        placeholder="Se generará automáticamente si se deja vacío"
                       />
                       <button
                         type="button"
@@ -354,6 +432,9 @@ focus:border-green-500"
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </button>
                     </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Si no especificas contraseña, se generará una automáticamente
+                    </p>
                   </div>
                 )}
 
@@ -364,8 +445,7 @@ focus:border-green-500"
                   <select
                     value={formData.rol}
                     onChange={(e) => setFormData({...formData, rol: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500
-focus:border-green-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
                   >
                     <option value="limitado">Acceso Limitado</option>
                     <option value="completo">Acceso Completo</option>
