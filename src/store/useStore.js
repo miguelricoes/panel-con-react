@@ -261,8 +261,8 @@ export const useStore = create((set, get) => ({
 
       if (response.ok) {
         const data = await response.json();
-        const allUsers = Array.isArray(data) ? data : (data.usuarios || data.data || []);
-        const usuarios = allUsers.filter(user => user.activo === true);
+        const usuarios = Array.isArray(data) ? data : (data.usuarios || data.data || []);
+        // Ya no filtramos por activo - todos los usuarios en BD son válidos
         set({ usuarios, loadingUsuarios: false });
         console.log(`✅ ${usuarios.length} usuarios cargados desde backend`);
       } else {

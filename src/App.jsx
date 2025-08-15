@@ -80,7 +80,7 @@ export default function App() {
   // Páginas disponibles según el rol
   const userRole = currentUser?.rol || 'limitado';
   const paginasLimitadas = ['inicio', 'calendario', 'reservas'];
-  const paginasCompletas = ['inicio', 'usuarios', 'calendario', 'reservas', 'pqrs'];
+  const paginasCompletas = ['inicio', 'usuarios', 'calendario', 'reservas'];
   
   const paginasPermitidas = userRole === 'completo' ? paginasCompletas : paginasLimitadas;
   
@@ -91,7 +91,6 @@ export default function App() {
 
   const paginas = {
     usuarios: userRole === 'completo' ? <Usuarios /> : null,
-    pqrs: userRole === 'completo' ? <PQRS /> : null,
     calendario: <Calendario />,
     reservas: <Reservas />,
     inicio: <Inicio userRole={userRole} />,

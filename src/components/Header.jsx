@@ -39,18 +39,7 @@ export default function Header({ onLogout }) {
           <span className="sm:hidden">Panel Admin</span>
         </h1>
         
-        {isApiConnected !== null && (
-          <div className={`flex items-center gap-2 text-sm ${
-            isApiConnected
-              ? 'text-green-600 dark:text-green-400'
-              : 'text-red-600 dark:text-red-400'
-          }`}>
-            <div className={`w-2 h-2 rounded-full ${
-              isApiConnected ? 'bg-green-500' : 'bg-red-500'
-            }`}></div>
-            {isApiConnected ? 'API Conectada' : 'API Desconectada'}
-          </div>
-        )}
+        {/* Indicador de API deshabilitado */}
       </div>
       <button
         onClick={onLogout}

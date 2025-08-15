@@ -117,7 +117,7 @@ const Usuarios = () => {
       return;
     }
 
-    if (confirm('¿Estás seguro de eliminar este usuario?\n\nEsta acción no se puede deshacer.')) {
+    if (confirm(`¿Estás seguro de eliminar permanentemente a "${userEmail}"?\n\nEsta acción eliminará el usuario de PostgreSQL y NO se puede deshacer.`)) {
       setDeletingUserId(userId);
 
       try {
@@ -126,7 +126,7 @@ const Usuarios = () => {
 
         const result = await deleteUsuario(userId);
         if (result.success) {
-          setSuccess('Usuario eliminado exitosamente');
+          setSuccess('Usuario eliminado permanentemente de la base de datos');
           setTimeout(() => setSuccess(''), 3000);
           await fetchUsuarios(true);
         } else {

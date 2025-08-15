@@ -13,7 +13,6 @@ export default function Sidebar({ userRole = 'limitado', userName = 'Usuario' })
     { id: "usuarios", label: "Usuarios", icon: "👥" },
     { id: "calendario", label: "Calendario", icon: "📅" },
     { id: "reservas", label: "Reservas", icon: "🏨" },
-    { id: "pqrs", label: "PQRS", icon: "📝" },
   ];
 
   const paginasLimitadas = [
