@@ -7,6 +7,18 @@ export default function Login({ onLogin }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const fillCredentials = (role) => {
+    if (role === 'admin') {
+      setEmail('admin_test@ejemplo.com');
+      setPassword('admin123');
+    } else if (role === 'empleado') {
+      setEmail('miguel@gmail.com');
+      setPassword('empleado123');
+    }
+    setError('');
+  };
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -73,16 +85,25 @@ sm:text-base"
 
         <div className="mb-6">
           <label className="block mb-2 text-sm sm:text-base font-medium">Contraseña</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-3 rounded bg-gray-700 text-white border border-gray-600 text-sm
-sm:text-base"
-            placeholder="admin123"
-            required
-            disabled={loading}
-          />
+          <div className="relative">
+            <input
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full px-4 py-3 pr-12 rounded bg-gray-700 text-white border border-gray-600 text-sm sm:text-base"
+              placeholder="admin123"
+              required
+              disabled={loading}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+              disabled={loading}
+            >
+              {showPassword ? '🙈' : '👁️'}
+            </button>
+          </div>
         </div>
 
         <button
@@ -97,15 +118,17 @@ sm:text-base transition-colors"
         <div className="mt-4 flex gap-2">
           <button
             type="button"
-            onClick={() => onLogin({ nombre: 'Administrador Demo', rol: 'completo', email: 'admin@demo.com' })}
+            onClick={() => fillCredentials('admin')}
             className="flex-1 bg-green-600 hover:bg-green-700 py-2 rounded font-medium text-xs sm:text-sm transition-colors"
+            disabled={loading}
           >
             👑 Administrador
           </button>
           <button
             type="button"
-            onClick={() => onLogin({ nombre: 'Empleado Demo', rol: 'limitado', email: 'empleado@demo.com' })}
+            onClick={() => fillCredentials('empleado')}
             className="flex-1 bg-orange-600 hover:bg-orange-700 py-2 rounded font-medium text-xs sm:text-sm transition-colors"
+            disabled={loading}
           >
             👤 Empleado
           </button>
