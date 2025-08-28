@@ -94,6 +94,23 @@ sm:text-base transition-colors"
           {loading ? 'Verificando...' : 'Iniciar Sesión'}
         </button>
 
+        <div className="mt-4 flex gap-2">
+          <button
+            type="button"
+            onClick={() => onLogin({ nombre: 'Administrador Demo', rol: 'completo', email: 'admin@demo.com' })}
+            className="flex-1 bg-green-600 hover:bg-green-700 py-2 rounded font-medium text-xs sm:text-sm transition-colors"
+          >
+            👑 Administrador
+          </button>
+          <button
+            type="button"
+            onClick={() => onLogin({ nombre: 'Empleado Demo', rol: 'limitado', email: 'empleado@demo.com' })}
+            className="flex-1 bg-orange-600 hover:bg-orange-700 py-2 rounded font-medium text-xs sm:text-sm transition-colors"
+          >
+            👤 Empleado
+          </button>
+        </div>
+
         <p className="text-xs text-gray-400 mt-4 text-center">
           Usa las credenciales de la base de datos PostgreSQL
         </p>
