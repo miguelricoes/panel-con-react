@@ -115,23 +115,44 @@ sm:text-base transition-colors"
           {loading ? 'Verificando...' : 'Iniciar Sesión'}
         </button>
 
-        <div className="mt-4 flex gap-2">
-          <button
-            type="button"
-            onClick={() => fillCredentials('admin')}
-            className="flex-1 bg-green-600 hover:bg-green-700 py-2 rounded font-medium text-xs sm:text-sm transition-colors"
-            disabled={loading}
-          >
-            👑 Administrador
-          </button>
-          <button
-            type="button"
-            onClick={() => fillCredentials('empleado')}
-            className="flex-1 bg-orange-600 hover:bg-orange-700 py-2 rounded font-medium text-xs sm:text-sm transition-colors"
-            disabled={loading}
-          >
-            👤 Empleado
-          </button>
+        <div className="mt-4 space-y-2">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => fillCredentials('admin')}
+              className="flex-1 bg-green-600 hover:bg-green-700 py-2 rounded font-medium text-xs sm:text-sm transition-colors"
+              disabled={loading}
+            >
+              👑 Admin Credenciales
+            </button>
+            <button
+              type="button"
+              onClick={() => fillCredentials('empleado')}
+              className="flex-1 bg-orange-600 hover:bg-orange-700 py-2 rounded font-medium text-xs sm:text-sm transition-colors"
+              disabled={loading}
+            >
+              👤 Empleado Credenciales
+            </button>
+          </div>
+          <div className="text-center text-xs text-gray-400">O acceso directo modo demo:</div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => onLogin({ nombre: 'Admin Demo', rol: 'completo', email: 'admin@demo.com' })}
+              className="flex-1 bg-purple-600 hover:bg-purple-700 py-2 rounded font-medium text-xs sm:text-sm transition-colors"
+              disabled={loading}
+            >
+              👑 Admin Demo
+            </button>
+            <button
+              type="button"
+              onClick={() => onLogin({ nombre: 'Empleado Demo', rol: 'limitado', email: 'empleado@demo.com' })}
+              className="flex-1 bg-indigo-600 hover:bg-indigo-700 py-2 rounded font-medium text-xs sm:text-sm transition-colors"
+              disabled={loading}
+            >
+              👤 Empleado Demo
+            </button>
+          </div>
         </div>
 
         <p className="text-xs text-gray-400 mt-4 text-center">
